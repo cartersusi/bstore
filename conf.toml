@@ -1,0 +1,5 @@
+basePath="bstore1"
+minCompress=1000000
+MinLargeCompress=2000000
+Verbose=true
+Log="logs/bstore1.log"
