@@ -1,4 +1,4 @@
-module github.com/carter4299/blobstore
+module github.com/carter4299/bstore
 
 go 1.23.1
 
