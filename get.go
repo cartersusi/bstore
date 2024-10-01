@@ -11,12 +11,14 @@ import (
 )
 
 func Get(c *gin.Context) {
-	fpath := c.GetHeader("X-File-Path")
+	fpath := c.Param("file_path")
 	if fpath == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "X-File-Path header is required"})
 		return
 	}
-	fpath = filepath.Join(BASEPATH, fpath)
+	cfg := GetConfig(c)
+
+	fpath = filepath.Join(cfg.BasePath, fpath)
 
 	_, err := os.Stat(fpath)
 	file_exist := !os.IsNotExist(err)

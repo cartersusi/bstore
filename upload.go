@@ -11,12 +11,14 @@ import (
 )
 
 func Upload(c *gin.Context) {
-	fpath := c.GetHeader("X-File-Path")
+	fpath := c.Param("file_path")
 	if fpath == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "X-File-Path header is required"})
 		return
 	}
-	fpath = filepath.Join(BASEPATH, fpath)
+	cfg := GetConfig(c)
+
+	fpath = filepath.Join(cfg.BasePath, fpath)
 	log.Printf("Uploading file %s", fpath)
 
 	dir := filepath.Dir(fpath)
@@ -25,8 +27,8 @@ func Upload(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting directory"})
 		return
 	}
-	log.Printf("Directory for file %s: %s", fpath, dir)
 
+	log.Printf("Creating directory %s", dir)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		log.Printf("Error creating directory %s: %s", dir, err)
@@ -45,24 +47,34 @@ func Upload(c *gin.Context) {
 		}
 		return
 	}
-
+	if size > cfg.MaxFileSize {
+		log.Printf("File size %d exceeds maximum allowed size %d", size, cfg.MaxFileSize)
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File too large"})
+		return
+	}
 	log.Printf("Request body size: %d bytes", size)
 
-	if size >= MB2 {
-		err = pCompress(&buf, fpath+".gz")
-		if err != nil {
-			log.Printf("Error compressing file %s: %s", fpath, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if cfg.Compress {
+		if size >= MB2 {
+			log.Printf("File size %d exceeds 2MB, concurrent compressing", size)
+			err = pCompress(&buf, fpath+".gz")
+			if err != nil {
+				log.Printf("Error compressing file %s: %s", fpath, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 			return
-		}
-	} else if size > MB {
-		err = Compress(&buf, fpath+".gz")
-		if err != nil {
-			log.Printf("Error compressing file %s: %s", fpath, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+		} else {
+			log.Printf("File size %d exceeds 1MB, compressing", size)
+			err = Compress(&buf, fpath+".gz")
+			if err != nil {
+				log.Printf("Error compressing file %s: %s", fpath, err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 		}
 	} else {
+		log.Printf("Copying file %s", fpath)
 		err = WriteBuffer(&buf, fpath)
 		if err != nil {
 			log.Printf("Error copying file %s: %s", fpath, err)

@@ -1,0 +1,6 @@
+host: localhost
+port: 8080
+base_path: bstorage
+max_file_size: 1000000000
+log_file: bstore.log
+compress: true

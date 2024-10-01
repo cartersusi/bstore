@@ -2,3 +2,6 @@
 *.gz
 *.png
 *.mov
+input/
+output/
+bstore
