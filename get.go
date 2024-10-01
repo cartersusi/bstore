@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -32,8 +31,7 @@ func Get(c *gin.Context) {
 	if file_exist && contains_gzip {
 		content, err := Decompress(fpath)
 		if err != nil {
-			log.Printf("Error decompressing file %s: %s", fpath, err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			HandleError(c, NewError(http.StatusInternalServerError, "Error decompressing file", err))
 			return
 		}
 		c.Data(http.StatusOK, "application/octet-stream", content.Bytes())
@@ -47,7 +45,7 @@ func Get(c *gin.Context) {
 			c.File(fpath)
 			return
 		} else {
-			c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+			HandleError(c, NewError(http.StatusNotFound, "File not found", nil))
 			return
 		}
 	}
@@ -58,8 +56,7 @@ func Get(c *gin.Context) {
 		if !os.IsNotExist(err) {
 			content, err := Decompress(fpath)
 			if err != nil {
-				log.Printf("Error decompressing file %s: %s", fpath, err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				HandleError(c, NewError(http.StatusInternalServerError, "Error decompressing file", err))
 				return
 			}
 			c.Data(http.StatusOK, "application/octet-stream", content.Bytes())

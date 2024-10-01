@@ -84,6 +84,6 @@ async function downloader() {
     }
 }
 
-//uploader();
+uploader();
 
 downloader();
