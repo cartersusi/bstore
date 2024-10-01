@@ -15,19 +15,14 @@ func main() {
 	r := gin.Default()
 
 	conf_file := flag.String("config", "conf.yml", "Configuration file")
-	cfg := &ServerCfg{}
-	err := cfg.Load(*conf_file)
+	bstore := &ServerCfg{}
+	err := bstore.Load(*conf_file)
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg.Print()
+	bstore.Print()
 
-	r.Use(func(c *gin.Context) {
-		c.Set("config", cfg)
-		c.Next()
-	})
-
-	f, err := os.OpenFile(cfg.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(bstore.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,9 +33,9 @@ func main() {
 	r.Use(gin.Logger())
 	log.SetOutput(multiWriter)
 
-	r.PUT("/api/upload/*file_path", Upload)
-	r.GET("/api/download/*file_path", Get)
+	r.PUT("/api/upload/*file_path", bstore.Upload)
+	r.GET("/api/download/*file_path", bstore.Get)
 	//r.DELETE("/api/delete/:file_path", Delete)
 
-	r.Run(fmt.Sprintf("%s:%s", cfg.Host, cfg.Port))
+	r.Run(fmt.Sprintf("%s:%s", bstore.Host, bstore.Port))
 }

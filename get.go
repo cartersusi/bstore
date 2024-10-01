@@ -1,72 +1,51 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Get(c *gin.Context) {
+func (bstore *ServerCfg) Get(c *gin.Context) {
 	fpath := c.Param("file_path")
 	if fpath == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "X-File-Path header is required"})
-		return
-	}
-	cfg := GetConfig(c)
-
-	fpath = filepath.Join(cfg.BasePath, fpath)
-
-	_, err := os.Stat(fpath)
-	file_exist := !os.IsNotExist(err)
-	contains_gzip := strings.Contains(fpath, ".gz")
-
-	if file_exist && !contains_gzip {
-		c.File(fpath)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file_path is required"})
 		return
 	}
 
-	if file_exist && contains_gzip {
-		content, err := Decompress(fpath)
+	fpath = filepath.Join(bstore.BasePath, fpath)
+	originalPath := fpath
+	zstPath := fpath + ".zst"
+
+	// Check for the original file first
+	if info, err := os.Stat(originalPath); err == nil {
+		log.Printf("Serving file %s", originalPath)
+		if !info.IsDir() {
+			c.File(originalPath)
+			return
+		}
+	} else {
+		log.Printf("No such file: %s", originalPath)
+	}
+
+	// Check for the zstped file
+	if info, err := os.Stat(zstPath); err == nil && !info.IsDir() {
+		log.Printf("Decompressing file %s", zstPath)
+		content, err := Decompress(zstPath)
 		if err != nil {
-			HandleError(c, NewError(http.StatusInternalServerError, "Error decompressing file", err))
+			log.Printf("Error decompressing file %s: %v", zstPath, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decompressing file: " + err.Error()})
 			return
 		}
 		c.Data(http.StatusOK, "application/octet-stream", content.Bytes())
 		return
+	} else {
+		log.Printf("No such file: %s", zstPath)
 	}
 
-	if !file_exist && contains_gzip {
-		fpath = strings.TrimSuffix(fpath, ".gz")
-		_, err = os.Stat(fpath)
-		if !os.IsNotExist(err) {
-			c.File(fpath)
-			return
-		} else {
-			HandleError(c, NewError(http.StatusNotFound, "File not found", nil))
-			return
-		}
-	}
-
-	if !file_exist && !contains_gzip {
-		fpath += ".gz"
-		_, err = os.Stat(fpath)
-		if !os.IsNotExist(err) {
-			content, err := Decompress(fpath)
-			if err != nil {
-				HandleError(c, NewError(http.StatusInternalServerError, "Error decompressing file", err))
-				return
-			}
-			c.Data(http.StatusOK, "application/octet-stream", content.Bytes())
-			return
-		} else {
-			c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
-			return
-		}
-	}
-
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "Unknown error"})
-	return
+	// If we reach here, the file doesn't exist
+	c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
 }

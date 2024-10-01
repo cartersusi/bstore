@@ -2,48 +2,13 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
+
 	"io"
 	"os"
 
-	"golang.org/x/build/pargzip"
+	//"golang.org/x/build/pargzip"
+	"github.com/klauspost/compress/zstd"
 )
-
-func Compress(buf *bytes.Buffer, outfname string) error {
-	outfile, err := os.Create(outfname)
-	if err != nil {
-		return err
-	}
-	defer outfile.Close()
-
-	gzipWriter := gzip.NewWriter(outfile)
-	defer gzipWriter.Close()
-
-	_, err = io.Copy(gzipWriter, buf)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func pCompress(buf *bytes.Buffer, outfname string) error {
-	outfile, err := os.Create(outfname)
-	if err != nil {
-		return err
-	}
-	defer outfile.Close()
-
-	gzipWriter := pargzip.NewWriter(outfile)
-	defer gzipWriter.Close()
-
-	_, err = io.Copy(gzipWriter, buf)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func Decompress(fpath string) (*bytes.Buffer, error) {
 	file, err := os.Open(fpath)
@@ -52,14 +17,14 @@ func Decompress(fpath string) (*bytes.Buffer, error) {
 	}
 	defer file.Close()
 
-	gzipReader, err := gzip.NewReader(file)
+	zstdReader, err := zstd.NewReader(file)
 	if err != nil {
 		return nil, err
 	}
-	defer gzipReader.Close()
+	defer zstdReader.Close()
 
 	var buf bytes.Buffer
-	_, err = io.Copy(&buf, gzipReader)
+	_, err = io.Copy(&buf, zstdReader)
 	if err != nil {
 		return nil, err
 	}

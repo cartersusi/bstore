@@ -8,17 +8,19 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/klauspost/compress/zstd"
 )
 
-func Upload(c *gin.Context) {
+func (bstore *ServerCfg) Upload(c *gin.Context) {
 	fpath := c.Param("file_path")
 	if fpath == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "X-File-Path header is required"})
 		return
 	}
-	cfg := GetConfig(c)
-
-	fpath = filepath.Join(cfg.BasePath, fpath)
+	fpath = filepath.Join(bstore.BasePath, fpath)
+	if bstore.Compress {
+		fpath += ".zst"
+	}
 	log.Printf("Uploading file %s", fpath)
 
 	dir := filepath.Dir(fpath)
@@ -26,12 +28,17 @@ func Upload(c *gin.Context) {
 		HandleError(c, NewError(http.StatusInternalServerError, "Error getting directory", nil))
 		return
 	}
-
-	log.Printf("Creating directory %s", dir)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		HandleError(c, NewError(http.StatusInternalServerError, "Error creating directory", err))
 		return
 	}
+
+	file, err := os.Create(fpath)
+	if err != nil {
+		HandleError(c, NewError(http.StatusInternalServerError, "Error creating file", err))
+		return
+	}
+	defer file.Close()
 
 	var buf bytes.Buffer
 	size, err := buf.ReadFrom(c.Request.Body)
@@ -39,49 +46,34 @@ func Upload(c *gin.Context) {
 		HandleError(c, NewError(http.StatusInternalServerError, "Error reading request body", err))
 		return
 	}
-	if size > cfg.MaxFileSize {
-		HandleError(c, NewError(http.StatusRequestEntityTooLarge, "File too large", nil))
+	if size > bstore.MaxFileSize {
+		HandleError(c, NewError(http.StatusBadRequest, "File size exceeds maximum allowed size", nil))
 		return
 	}
-	log.Printf("Request body size: %d bytes", size)
 
-	if cfg.Compress {
-		if err := handle_compress(&buf, fpath, size); err != nil {
-			HandleError(c, err)
+	opts := []zstd.EOption{zstd.WithEncoderLevel(zstd.SpeedDefault)}
+
+	if bstore.Compress {
+		enc, err := zstd.NewWriter(file, opts...)
+		if err != nil {
+			HandleError(c, NewError(http.StatusInternalServerError, "Error creating zstd writer", err))
+			return
+		}
+		defer enc.Close()
+
+		_, err = enc.Write(buf.Bytes())
+		if err != nil {
+			HandleError(c, NewError(http.StatusInternalServerError, "Error writing compressed data", err))
 			return
 		}
 	} else {
-		if err := handle_copy(&buf, fpath); err != nil {
-			HandleError(c, err)
+		_, err = file.Write(buf.Bytes())
+		if err != nil {
+			HandleError(c, NewError(http.StatusInternalServerError, "Error writing data", err))
 			return
 		}
 	}
 
-	log.Printf("File %s uploaded successfully", fpath)
+	file.Sync()
 	c.JSON(http.StatusOK, gin.H{"message": "File uploaded successfully"})
-}
-
-func handle_compress(buf *bytes.Buffer, fpath string, size int64) error {
-	var err error
-	if size >= MB2 {
-		log.Printf("File size %d exceeds 2MB, concurrent compressing", size)
-		err = pCompress(buf, fpath+".gz")
-	} else {
-		log.Printf("File size %d exceeds 1MB, compressing", size)
-		err = Compress(buf, fpath+".gz")
-	}
-
-	if err != nil {
-		return NewError(http.StatusInternalServerError, "Error compressing file", err)
-	}
-
-	return nil
-}
-
-func handle_copy(buf *bytes.Buffer, fpath string) error {
-	log.Printf("Copying file %s", fpath)
-	if err := WriteBuffer(buf, fpath); err != nil {
-		return NewError(http.StatusInternalServerError, "Error copying file", err)
-	}
-	return nil
 }

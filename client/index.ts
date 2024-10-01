@@ -29,14 +29,14 @@ interface TestFiles {
 
 const test_filenames : TestFiles = {
     thumbnail: {
-        sourceFile: "input/thumbnail.png",
-        storedFile: "images/thumbnail.png",
-        outFile: "output/new_thumbnail.png",
+        sourceFile: "input/screenshot.png",
+        storedFile: "images/screenshot.png",
+        outFile: "output/screenshot.png",
     },
     video: {
-        sourceFile: "input/video.mov",
-        storedFile: "videos/video.mov",
-        outFile: "output/new_video.mov",
+        sourceFile: "input/drone.mp4",
+        storedFile: "videos/drone.mp4",
+        outFile: "output/drone.mp4",
     },
 };
 
@@ -67,23 +67,27 @@ async function Bstore(blob_path: string, btype: BlobType, blob?: Blob): Promise<
 }
 
 async function uploader() {
-    for (const filename of Object.keys(test_filenames)) {
-        const file = test_filenames[filename];
-        const fileData = await fs.readFile(file.sourceFile);
-        const blob = new Blob([fileData]);
-        await Bstore(file.storedFile, BStore.Upload, blob);
+    for (let i = 0; i < 100; i++) {
+        for (const filename of Object.keys(test_filenames)) {
+            const file = test_filenames[filename];
+            const fileData = await fs.readFile(file.sourceFile);
+            const blob = new Blob([fileData]);
+            await Bstore(file.storedFile, BStore.Upload, blob);
+        }
     }
 }
 
 async function downloader() {
-    for (const filename of Object.keys(test_filenames)) {
-        const file = test_filenames[filename];
-        const blob = await Bstore(file.storedFile, BStore.Download);
-        const fileData = await blob.arrayBuffer();
-        await fs.writeFile(file.outFile, Buffer.from(fileData));
+    for (let i = 0; i < 10; i++) {
+        for (const filename of Object.keys(test_filenames)) {
+            const file = test_filenames[filename];
+            const blob = await Bstore(file.storedFile, BStore.Download);
+            const fileData = await blob.arrayBuffer();
+            await fs.writeFile(file.outFile, Buffer.from(fileData));
+        }
     }
 }
 
 uploader();
 
-downloader();
+//downloader();
