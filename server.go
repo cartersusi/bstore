@@ -10,13 +10,23 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type CORSConfig struct {
+	AllowOrigins     []string `yaml:"allow_origins"`
+	AllowMethods     []string `yaml:"allow_methods"`
+	AllowHeaders     []string `yaml:"allow_headers"`
+	ExposeHeaders    []string `yaml:"expose_headers"`
+	AllowCredentials bool     `yaml:"allow_credentials"`
+	MaxAge           int      `yaml:"max_age"`
+}
+
 type ServerCfg struct {
-	Port        string `yaml:"port"`
-	Host        string `yaml:"host"`
-	BasePath    string `yaml:"base_path"`
-	MaxFileSize int64  `yaml:"max_file_size"`
-	LogFile     string `yaml:"log_file"`
-	Compress    bool   `yaml:"compress"`
+	Port        string     `yaml:"port"`
+	Host        string     `yaml:"host"`
+	BasePath    string     `yaml:"base_path"`
+	MaxFileSize int64      `yaml:"max_file_size"`
+	LogFile     string     `yaml:"log_file"`
+	Compress    bool       `yaml:"compress"`
+	CORS        CORSConfig `yaml:"cors"`
 }
 
 type BstoreError struct {
@@ -54,11 +64,12 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 	defer f.Close()
 
 	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(&cfg)
+	err = decoder.Decode(cfg)
 	if err != nil {
 		return err
 	}
 
+	// Set default values if not specified in the YAML
 	if cfg.Port == "" {
 		cfg.Port = "8080"
 	}
@@ -70,7 +81,7 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 		cfg.BasePath = cd
 	}
 	if cfg.MaxFileSize == 0 {
-		cfg.MaxFileSize = 1024 * 1024 * 100
+		cfg.MaxFileSize = 1024 * 1024 * 100 // 100 MB
 	}
 	if cfg.LogFile == "" {
 		cfg.LogFile = "bstore.log"
@@ -84,9 +95,16 @@ func (cfg *ServerCfg) Print() {
 	fmt.Printf("Port: %s\n", cfg.Port)
 	fmt.Printf("Host: %s\n", cfg.Host)
 	fmt.Printf("BasePath: %s\n", filepath.Join(cd, cfg.BasePath))
-	fmt.Printf("MaxFileSize: %d mb\n", cfg.MaxFileSize/1024)
+	fmt.Printf("MaxFileSize: %d mb\n", cfg.MaxFileSize/1024/1024)
 	fmt.Printf("LogFile: %s\n", filepath.Join(cd, cfg.LogFile))
 	fmt.Printf("Compress: %t\n", cfg.Compress)
+	fmt.Printf("CORS:\n")
+	fmt.Printf("  Allow Origins: %v\n", cfg.CORS.AllowOrigins)
+	fmt.Printf("  Allow Methods: %v\n", cfg.CORS.AllowMethods)
+	fmt.Printf("  Allow Headers: %v\n", cfg.CORS.AllowHeaders)
+	fmt.Printf("  Expose Headers: %v\n", cfg.CORS.ExposeHeaders)
+	fmt.Printf("  Allow Credentials: %t\n", cfg.CORS.AllowCredentials)
+	fmt.Printf("  Max Age: %d\n", cfg.CORS.MaxAge)
 }
 
 func GetConfig(c *gin.Context) *ServerCfg {

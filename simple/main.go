@@ -14,10 +14,37 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
+	r.Use(serve())
 	r.PUT("/api/upload/*file_path", uploader)
 	r.GET("/api/download/*file_path", downloader)
 
 	r.Run(":8080")
+}
+
+func serve() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+
+		info, err := os.Stat(path)
+		if err != nil {
+			c.Status(http.StatusNotFound)
+			return
+		}
+
+		if info.IsDir() {
+			c.Status(http.StatusForbidden)
+			return
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		http.ServeContent(c.Writer, c.Request, info.Name(), info.ModTime(), file)
+	}
 }
 
 func downloader(c *gin.Context) {
