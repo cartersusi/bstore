@@ -6,3 +6,7 @@ input/
 output/
 bstore
 *.zst
+*.pdf
+*.txt
+*.json
+*.csv

@@ -6,9 +6,26 @@ import (
 	"io"
 	"os"
 
-	//"golang.org/x/build/pargzip"
 	"github.com/klauspost/compress/zstd"
 )
+
+func Compress(buf *bytes.Buffer, file *os.File) error {
+
+	opts := []zstd.EOption{zstd.WithEncoderLevel(zstd.SpeedDefault)}
+
+	enc, err := zstd.NewWriter(file, opts...)
+	if err != nil {
+		return err
+	}
+	defer enc.Close()
+
+	_, err = enc.Write(buf.Bytes())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func Decompress(fpath string) (*bytes.Buffer, error) {
 	file, err := os.Open(fpath)

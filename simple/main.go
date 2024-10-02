@@ -1,4 +1,4 @@
-package simple
+package main
 
 import (
 	"fmt"
@@ -10,18 +10,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func server() {
+func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
-	r.PUT("/upload", Uplaod)
-	r.GET("/get", Get)
+	r.PUT("/api/upload/*file_path", uploader)
+	r.GET("/api/download/*file_path", downloader)
 
 	r.Run(":8080")
 }
 
-func Get(c *gin.Context) {
-	fpath := c.GetHeader("X-File-Path")
+func downloader(c *gin.Context) {
+	fpath := c.Param("file_path")[1:]
 	fmt.Println(fpath)
 
 	_, err := os.Stat(fpath)
@@ -34,16 +34,19 @@ func Get(c *gin.Context) {
 	return
 }
 
-func Uplaod(c *gin.Context) {
-	fpath := c.GetHeader("X-File-Path")
+func uploader(c *gin.Context) {
+	fpath := c.Param("file_path")[1:]
+	fmt.Println("Endpoint Hit: Upload", fpath)
 
 	dir := filepath.Dir(fpath)
 	os.MkdirAll(dir, os.ModePerm)
+	fmt.Println("Directory created:", dir)
 
 	file, _ := os.Create(fpath)
 	defer file.Close()
 
 	io.Copy(file, c.Request.Body)
 
+	file.Sync()
 	c.JSON(http.StatusOK, gin.H{"message": "File uploaded successfully"})
 }

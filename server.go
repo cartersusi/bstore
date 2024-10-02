@@ -10,9 +10,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const MB = 1e6
-const MB2 = 2 * MB
-
 type ServerCfg struct {
 	Port        string `yaml:"port"`
 	Host        string `yaml:"host"`
@@ -62,6 +59,23 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 		return err
 	}
 
+	if cfg.Port == "" {
+		cfg.Port = "8080"
+	}
+	if cfg.Host == "" {
+		cfg.Host = "localhost"
+	}
+	if cfg.BasePath == "" {
+		cd, _ := os.Getwd()
+		cfg.BasePath = cd
+	}
+	if cfg.MaxFileSize == 0 {
+		cfg.MaxFileSize = 1024 * 1024 * 100
+	}
+	if cfg.LogFile == "" {
+		cfg.LogFile = "bstore.log"
+	}
+
 	return nil
 }
 
@@ -70,7 +84,7 @@ func (cfg *ServerCfg) Print() {
 	fmt.Printf("Port: %s\n", cfg.Port)
 	fmt.Printf("Host: %s\n", cfg.Host)
 	fmt.Printf("BasePath: %s\n", filepath.Join(cd, cfg.BasePath))
-	fmt.Printf("MaxFileSize: %d mb\n", cfg.MaxFileSize/MB)
+	fmt.Printf("MaxFileSize: %d mb\n", cfg.MaxFileSize/1024)
 	fmt.Printf("LogFile: %s\n", filepath.Join(cd, cfg.LogFile))
 	fmt.Printf("Compress: %t\n", cfg.Compress)
 }
