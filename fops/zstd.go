@@ -2,14 +2,14 @@ package fops
 
 import (
 	"bytes"
-
 	"io"
+	"log"
 	"os"
 
 	"github.com/klauspost/compress/zstd"
 )
 
-func Compress(buf *bytes.Buffer, file *os.File, level int) error {
+func Compress(buf *bytes.Buffer, file *os.File, level int, encrypt bool) error {
 	var compression_lvl zstd.EncoderLevel
 	switch level {
 	case 1:
@@ -31,7 +31,20 @@ func Compress(buf *bytes.Buffer, file *os.File, level int) error {
 	}
 	defer enc.Close()
 
-	_, err = enc.Write(buf.Bytes())
+	var data []byte
+	if encrypt {
+		log.Println("Encrypting data")
+		data, err = Encrypt(buf.Bytes())
+		if err != nil {
+			return err
+		}
+	} else {
+		data = buf.Bytes()
+	}
+
+	log.Println("Done Encrypting data")
+
+	_, err = enc.Write(data)
 	if err != nil {
 		return err
 	}
@@ -39,7 +52,7 @@ func Compress(buf *bytes.Buffer, file *os.File, level int) error {
 	return nil
 }
 
-func Decompress(fpath string) ([]byte, error) {
+func Decompress(fpath string, encrypt bool) ([]byte, error) {
 	file, err := os.Open(fpath)
 	if err != nil {
 		return nil, err
@@ -58,5 +71,8 @@ func Decompress(fpath string) ([]byte, error) {
 		return nil, err
 	}
 
+	if encrypt {
+		return Decrypt(buf.Bytes())
+	}
 	return buf.Bytes(), nil
 }

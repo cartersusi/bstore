@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,7 @@ type ServerCfg struct {
 	MaxFileSize      int64            `yaml:"max_file_size"`
 	MaxFileNameLen   int              `yaml:"max_file_name_length"`
 	LogFile          string           `yaml:"log_file"`
+	Encrypt          bool             `yaml:"encryption"`
 	Compress         bool             `yaml:"compress"`
 	CompressionLevel int              `yaml:"compression_lvl"`
 	CORS             CORSConfig       `yaml:"cors"`
@@ -105,21 +107,11 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 		}
 	}
 
-	if cfg.Port == "" {
-	}
-	if cfg.Host == "" {
-	}
-	if cfg.PublicBasePath == "" {
-	}
-	if cfg.PrivateBasePath == "" {
-	}
-	if cfg.MaxFileSize == 0 {
-	}
-	if cfg.MaxFileNameLen == 0 {
-	}
-	if cfg.LogFile == "" {
-	}
-	if cfg.CompressionLevel > 4 || cfg.CompressionLevel < 1 {
+	if cfg.Encrypt {
+		if os.Getenv("BSTORE_ENC_KEY") == "" {
+			return errors.New("BSTORE_ENC_KEY environment variable is not set. Tip: Use $openssl rand -hex 16")
+		}
+
 	}
 
 	return nil
@@ -135,6 +127,7 @@ private_base_path: priv/bstore
 max_file_size: 100000000 # bytes
 max_file_name_length: 256 
 log_file: bstore.log
+encrypt: true
 compress: true
 compression_lvl: 2 # 1-4
 cors:
@@ -173,6 +166,18 @@ middleware:
 		log.Fatal(err)
 	}
 
+	enc_key, err := get_cmd("openssl", "rand", "-hex", "16")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	read_write_key, err := get_cmd("openssl", "rand", "-base64", "32")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Encryption key: ", enc_key)
+	fmt.Println("Read Write key: ", read_write_key)
 	fmt.Println("Configuration file created: conf.yml")
 	os.Exit(0)
 }
@@ -187,6 +192,7 @@ func (cfg *ServerCfg) Print() {
 	fmt.Printf("MaxFileSize: %d mb\n", cfg.MaxFileSize/1024/1024)
 	fmt.Printf("MaxFileNameLen: %d\n", cfg.MaxFileNameLen)
 	fmt.Printf("LogFile: %s\n", filepath.Join(cd, cfg.LogFile))
+	fmt.Printf("Encrypt: %t\n", cfg.Encrypt)
 	fmt.Printf("Compress: %t\n", cfg.Compress)
 	fmt.Printf("CompressionLevel: %d\n", cfg.CompressionLevel)
 	fmt.Printf("CORS:\n")
@@ -241,4 +247,18 @@ func check_rw_key() error {
 		return errors.New("BSTORE_READ_WRITE_KEY environment variable is not set")
 	}
 	return nil
+}
+
+func get_cmd(name string, arg ...string) (string, error) {
+	cmd := exec.Command(name, arg...)
+	if errors.Is(cmd.Err, exec.ErrDot) {
+		cmd.Err = nil
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", err
+	}
+
+	return string(output), nil
 }

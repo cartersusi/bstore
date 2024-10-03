@@ -38,7 +38,7 @@ func (bstore *ServerCfg) Serve() gin.HandlerFunc {
 		}
 
 		if isCompressed {
-			content, err := fops.Decompress(fpath)
+			content, err := fops.Decompress(fpath, bstore.Encrypt)
 			if err != nil {
 				c.Status(http.StatusInternalServerError)
 				return
@@ -90,7 +90,7 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 	}
 
 	if bstore.Compress {
-		err = fops.Compress(&buf, file, bstore.CompressionLevel)
+		err = fops.Compress(&buf, file, bstore.CompressionLevel, bstore.Encrypt)
 		if err != nil {
 			HandleError(c, NewError(http.StatusInternalServerError, "Error writing compressed data", err))
 			return
@@ -128,7 +128,7 @@ func (bstore *ServerCfg) Get(c *gin.Context) {
 
 	if info, err := os.Stat(zstPath); err == nil && !info.IsDir() {
 		log.Printf("Decompressing file %s", zstPath)
-		content, err := fops.Decompress(zstPath)
+		content, err := fops.Decompress(zstPath, bstore.Encrypt)
 		if err != nil {
 			log.Printf("Error decompressing file %s: %v", zstPath, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decompressing file: " + err.Error()})

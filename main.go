@@ -29,7 +29,7 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	bstore.Cors(r)
-	//bstore.Middleware(r)
+	bstore.Middleware(r)
 
 	f, err := os.OpenFile(bstore.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

@@ -7,6 +7,7 @@ private_base_path: priv/bstore
 max_file_size: 1000000000 # bytes
 max_file_name_length: 256 
 log_file: bstore.log
+encryption: true # must use env var for key, gen key with $openssl rand -hex 16
 compress: true
 compression_lvl: 2 # 1-4
 cors:
