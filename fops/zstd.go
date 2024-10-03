@@ -1,4 +1,4 @@
-package main
+package fops
 
 import (
 	"bytes"
@@ -9,9 +9,21 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
-func Compress(buf *bytes.Buffer, file *os.File) error {
-
-	opts := []zstd.EOption{zstd.WithEncoderLevel(zstd.SpeedDefault)}
+func Compress(buf *bytes.Buffer, file *os.File, level int) error {
+	var compression_lvl zstd.EncoderLevel
+	switch level {
+	case 1:
+		compression_lvl = zstd.SpeedFastest
+	case 2:
+		compression_lvl = zstd.SpeedDefault
+	case 3:
+		compression_lvl = zstd.SpeedBetterCompression
+	case 4:
+		compression_lvl = zstd.SpeedBestCompression
+	default:
+		compression_lvl = zstd.SpeedDefault
+	}
+	opts := []zstd.EOption{zstd.WithEncoderLevel(compression_lvl)}
 
 	enc, err := zstd.NewWriter(file, opts...)
 	if err != nil {
@@ -27,7 +39,7 @@ func Compress(buf *bytes.Buffer, file *os.File) error {
 	return nil
 }
 
-func Decompress(fpath string) (*bytes.Buffer, error) {
+func Decompress(fpath string) ([]byte, error) {
 	file, err := os.Open(fpath)
 	if err != nil {
 		return nil, err
@@ -46,16 +58,5 @@ func Decompress(fpath string) (*bytes.Buffer, error) {
 		return nil, err
 	}
 
-	return &buf, nil
-}
-
-func WriteBuffer(buf *bytes.Buffer, fpath string) error {
-	file, err := os.Create(fpath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, buf)
-	return err
+	return buf.Bytes(), nil
 }

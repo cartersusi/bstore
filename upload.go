@@ -9,13 +9,18 @@ import (
 
 	"errors"
 
+	"github.com/carter4299/bstore/fops"
 	"github.com/gin-gonic/gin"
 )
 
 func (bstore *ServerCfg) Upload(c *gin.Context) {
-	fpath := c.Param("file_path")
+	validation := bstore.ValidateReq(c)
+	if validation.Err != nil {
+		c.JSON(validation.HttpStatus, gin.H{"error": validation.Err.Error()})
+		return
+	}
 
-	fpath, err := bstore.mkdir(fpath)
+	fpath, err := bstore.mkdir(validation.Fpath, validation.BasePath)
 	if err != nil {
 		HandleError(c, NewError(http.StatusBadRequest, "Error creating directory", err))
 		return
@@ -40,7 +45,7 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 	}
 
 	if bstore.Compress {
-		err = Compress(&buf, file)
+		err = fops.Compress(&buf, file, bstore.CompressionLevel)
 		if err != nil {
 			HandleError(c, NewError(http.StatusInternalServerError, "Error writing compressed data", err))
 			return
@@ -57,12 +62,12 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "File uploaded successfully"})
 }
 
-func (bstore *ServerCfg) mkdir(fpath string) (string, error) {
+func (bstore *ServerCfg) mkdir(fpath, base_path string) (string, error) {
 	if fpath == "" {
 		return "", errors.New("file path is required")
 	}
 
-	fpath = filepath.Join(bstore.BasePath, fpath)
+	fpath = filepath.Join(base_path, fpath)
 	if bstore.Compress {
 		fpath += ".zst"
 	}
