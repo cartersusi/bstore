@@ -1,4 +1,5 @@
 bstore
+.DS_Store
 
 *.log
 *.gz
