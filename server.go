@@ -1,244 +1,175 @@
 package main
 
 import (
-	"errors"
-	"fmt"
-	"log"
+	"container/list"
 	"net/http"
-	"os"
-	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"gopkg.in/yaml.v2"
 )
 
-type CORSConfig struct {
-	AllowOrigins     []string `yaml:"allow_origins"`
-	AllowMethods     []string `yaml:"allow_methods"`
-	AllowHeaders     []string `yaml:"allow_headers"`
-	ExposeHeaders    []string `yaml:"expose_headers"`
-	AllowCredentials bool     `yaml:"allow_credentials"`
-	MaxAge           int      `yaml:"max_age"`
+type IPRateLimiter struct {
+	ips        map[string]*list.Element
+	timestamps *list.List
+	capacity   int
+	mu         sync.Mutex
 }
 
-type RateLimitConfig struct {
-	Enabled     bool  `yaml:"enabled"`
-	MaxRequests int64 `yaml:"max_requests"`
-	Duration    int64 `yaml:"duration"`
+type timestampEntry struct {
+	ip    string
+	stamp int64
 }
 
-type MiddlewareConfig struct {
-	RateLimitCapacity int64           `yaml:"rate_limit_capacity"`
-	RateLimit         RateLimitConfig `yaml:"rate_limit"`
-}
-
-type ServerCfg struct {
-	Port             string           `yaml:"port"`
-	Host             string           `yaml:"host"`
-	ReadWriteKey     string           `yaml:"read_write_key"`
-	PublicBasePath   string           `yaml:"public_base_path"`
-	PrivateBasePath  string           `yaml:"private_base_path"`
-	MaxFileSize      int64            `yaml:"max_file_size"`
-	MaxFileNameLen   int              `yaml:"max_file_name_length"`
-	LogFile          string           `yaml:"log_file"`
-	Compress         bool             `yaml:"compress"`
-	CompressionLevel int              `yaml:"compression_lvl"`
-	CORS             CORSConfig       `yaml:"cors"`
-	MWare            MiddlewareConfig `yaml:"middleware"`
-}
-
-type BstoreError struct {
-	Code    int
-	Message string
-	Err     error
-}
-
-type ReqValidation struct {
-	Err        error
-	HttpStatus int
-	Fpath      string
-	BasePath   string
-}
-
-func (e *BstoreError) Error() string {
-	return fmt.Sprintf("%s: %v", e.Message, e.Err)
-}
-
-func NewError(code int, message string, err error) *BstoreError {
-	return &BstoreError{
-		Code:    code,
-		Message: message,
-		Err:     err,
+func NewIPRateLimiter(capacity int) *IPRateLimiter {
+	return &IPRateLimiter{
+		ips:        make(map[string]*list.Element),
+		timestamps: list.New(),
+		capacity:   capacity,
 	}
 }
 
-func HandleError(c *gin.Context, err error) {
-	if bstoreError, ok := err.(*BstoreError); ok {
-		c.JSON(bstoreError.Code, gin.H{"error": bstoreError.Message})
-	} else {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
-	}
-	c.Abort()
+func (bstore *ServerCfg) Cors(r *gin.Engine) {
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     bstore.CORS.AllowOrigins,
+		AllowMethods:     bstore.CORS.AllowMethods,
+		AllowHeaders:     bstore.CORS.AllowHeaders,
+		ExposeHeaders:    bstore.CORS.ExposeHeaders,
+		AllowCredentials: bstore.CORS.AllowCredentials,
+		MaxAge:           time.Duration(bstore.CORS.MaxAge),
+	}))
 }
 
-func (cfg *ServerCfg) Load(conf_file string) error {
-	f, err := os.Open(conf_file)
-	if err != nil {
-		fmt.Printf("Cannot find configuration file: `%s`\n", conf_file)
-		fmt.Println("\nLoad a configuration file with:\n\t$bstore -config <path>\n")
-		fmt.Println("Initialize a configuration file with:\n\t$bstore -init\n")
-		return err
+func (bstore *ServerCfg) Middleware(r *gin.Engine) {
+	r.Use(check_valid_path(bstore.MaxFileNameLen))
+	if bstore.MWare.RateLimit.Enabled {
+		rateLimiter := NewIPRateLimiter(int(bstore.MWare.RateLimitCapacity))
+		r.Use(checkIPRateLimit(rateLimiter, bstore.MWare.RateLimit.MaxRequests, time.Duration(bstore.MWare.RateLimit.Duration)))
 	}
-	defer f.Close()
+	r.Use(validateReadWriteKey(bstore.GetRWKey()))
+}
 
-	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(cfg)
-	if err != nil {
-		return err
-	}
+func (rl *IPRateLimiter) CheckRateLimit(ip string, limit int64, per time.Duration) bool {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
-	if cfg.ReadWriteKey == "env" || cfg.ReadWriteKey == "" {
-		err = check_rw_key()
-		if err != nil {
-			log.Printf("Error checking read_write_key. Please set the environment variable BSTORE_READ_WRITE_KEY or read_write_key in the configuration file.")
-			return err
+	now := time.Now().UnixNano()
+
+	if elem, exists := rl.ips[ip]; exists {
+		entry := elem.Value.(*timestampEntry)
+		if now-entry.stamp < per.Nanoseconds() {
+			return false
 		}
+		entry.stamp = now
+		rl.timestamps.MoveToFront(elem)
+	} else {
+		if len(rl.ips) >= rl.capacity {
+			oldest := rl.timestamps.Back()
+			if oldest != nil {
+				oldestEntry := oldest.Value.(*timestampEntry)
+				delete(rl.ips, oldestEntry.ip)
+				rl.timestamps.Remove(oldest)
+			}
+		}
+		entry := &timestampEntry{ip: ip, stamp: now}
+		elem := rl.timestamps.PushFront(entry)
+		rl.ips[ip] = elem
 	}
 
-	if cfg.Port == "" {
-	}
-	if cfg.Host == "" {
-	}
-	if cfg.PublicBasePath == "" {
-	}
-	if cfg.PrivateBasePath == "" {
-	}
-	if cfg.MaxFileSize == 0 {
-	}
-	if cfg.MaxFileNameLen == 0 {
-	}
-	if cfg.LogFile == "" {
-	}
-	if cfg.CompressionLevel > 4 || cfg.CompressionLevel < 1 {
-	}
-
-	return nil
+	return true
 }
 
-func Init() {
-	init_yaml := `
-host: localhost
-port: 8080
-read_write_key: "env" # "env" or "my_read_write_key", gen key with $openssl rand -base64 32
-public_base_path: pub/bstore
-private_base_path: priv/bstore
-max_file_size: 100000000 # bytes
-max_file_name_length: 256 
-log_file: bstore.log
-compress: true
-compression_lvl: 2 # 1-4
-cors:
-  allow_origins: 
-    - "*"
-  allow_methods: 
-    - "GET"
-    - "PUT"
-    - "DELETE"
-    - "OPTIONS"
-  allow_headers: 
-    - "Content-Type"
-    - "Authorization"
-    - "X-Access"
-  expose_headers: 
-    - "Content-Type"
-    - "Authorization"
-  allow_credentials: true
-  max_age: 3600           #seconds
-middleware:
-  rate_limit_capacity: 100000 # Max Number of Keys(IP Addr) in Memory
-  rate_limit:
-    enabled: true
-    max_requests: 100
-    duration: 60 # seconds
-`
-	log.Println("Creating configuration file: conf.yml")
-	f, err := os.Create("conf.yml")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	_, err = f.WriteString(init_yaml)
-	if err != nil {
-		log.Fatal(err)
+func validateReadWriteKey(validKey string) gin.HandlerFunc {
+	protectedPaths := []string{
+		"/api/upload/",
+		"/api/download/",
+		"/api/delete/",
 	}
 
-	fmt.Println("Configuration file created: conf.yml")
-	os.Exit(0)
-}
+	return func(c *gin.Context) {
+		path := c.Request.URL.Path
 
-func (cfg *ServerCfg) Print() {
-	cd, _ := os.Getwd()
-	fmt.Printf("Port: %s\n", cfg.Port)
-	fmt.Printf("Host: %s\n", cfg.Host)
-	fmt.Printf("ReadWriteKey: %s\n", cfg.ReadWriteKey)
-	fmt.Printf("PublicBasePath: %s\n", cfg.PublicBasePath)
-	fmt.Printf("PrivateBasePath: %s\n", cfg.PrivateBasePath)
-	fmt.Printf("MaxFileSize: %d mb\n", cfg.MaxFileSize/1024/1024)
-	fmt.Printf("MaxFileNameLen: %d\n", cfg.MaxFileNameLen)
-	fmt.Printf("LogFile: %s\n", filepath.Join(cd, cfg.LogFile))
-	fmt.Printf("Compress: %t\n", cfg.Compress)
-	fmt.Printf("CompressionLevel: %d\n", cfg.CompressionLevel)
-	fmt.Printf("CORS:\n")
-	fmt.Printf("  Allow Origins: %v\n", cfg.CORS.AllowOrigins)
-	fmt.Printf("  Allow Methods: %v\n", cfg.CORS.AllowMethods)
-	fmt.Printf("  Allow Headers: %v\n", cfg.CORS.AllowHeaders)
-	fmt.Printf("  Expose Headers: %v\n", cfg.CORS.ExposeHeaders)
-	fmt.Printf("  Allow Credentials: %t\n", cfg.CORS.AllowCredentials)
-	fmt.Printf("  Max Age: %d\n", cfg.CORS.MaxAge)
-	fmt.Printf("Middleware:\n")
-	fmt.Printf("  Rate Limit Capacity: %d\n", cfg.MWare.RateLimitCapacity)
-	fmt.Printf("  Rate Limit:\n")
-	fmt.Printf("    Enabled: %t\n", cfg.MWare.RateLimit.Enabled)
-	fmt.Printf("    Max Requests: %d\n", cfg.MWare.RateLimit.MaxRequests)
-	fmt.Printf("    Duration: %ds\n", cfg.MWare.RateLimit.Duration)
-}
+		needsValidation := false
+		for _, protectedPath := range protectedPaths {
+			if strings.HasPrefix(path, protectedPath) {
+				needsValidation = true
+				break
+			}
+		}
 
-func GetConfig(c *gin.Context) *ServerCfg {
-	return c.MustGet("config").(*ServerCfg)
-}
+		if !needsValidation {
+			c.Next()
+			return
+		}
 
-func (bstore *ServerCfg) ValidateReq(c *gin.Context) ReqValidation {
-	var ret ReqValidation
-	fpath := c.Param("file_path")
-	if fpath == "" {
-		ret.Err = errors.New("file_path is required")
-		ret.HttpStatus = http.StatusBadRequest
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing Authorization header"})
+			c.Abort()
+			return
+		}
+
+		const bearerPrefix = "Bearer "
+		if !strings.HasPrefix(authHeader, bearerPrefix) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Authorization header format"})
+			c.Abort()
+			return
+		}
+
+		key := strings.TrimPrefix(authHeader, bearerPrefix)
+		if key != validKey {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid read_write key"})
+			c.Abort()
+			return
+		}
+
+		c.Next()
 	}
-
-	ret.Fpath = fpath
-	ret.BasePath = bstore.get_base_path(c.Request.Header.Get("X-access"))
-
-	return ret
 }
 
-func (bstore *ServerCfg) get_base_path(x_access string) string {
-	if x_access == "public" {
-		return bstore.PublicBasePath
+func checkIPRateLimit(rl *IPRateLimiter, maxRequests int64, duration time.Duration) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip := c.ClientIP()
+		if !rl.CheckRateLimit(ip, maxRequests, duration) {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded"})
+			c.Abort()
+			return
+		}
+		c.Next()
 	}
-	return bstore.PrivateBasePath
 }
 
-func (bstore *ServerCfg) GetRWKey() string {
-	if bstore.ReadWriteKey == "env" || bstore.ReadWriteKey == "" {
-		return os.Getenv("BSTORE_READ_WRITE_KEY")
-	}
-	return bstore.ReadWriteKey
-}
+func check_valid_path(maxPathLength int) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if len(path) > maxPathLength {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Path too long"})
+			c.Abort()
+			return
+		}
 
-func check_rw_key() error {
-	if os.Getenv("BSTORE_READ_WRITE_KEY") == "" {
-		return errors.New("BSTORE_READ_WRITE_KEY environment variable is not set")
+		// serve public files, request to direct public files will be blocked.
+		if strings.HasPrefix(path, "/bstore") {
+			c.Next()
+			return
+		}
+
+		validPaths := []string{
+			"/api/upload/",
+			"/api/download/",
+			"/api/delete/",
+		}
+
+		for _, validPath := range validPaths {
+			if strings.HasPrefix(path, validPath) {
+				c.Next()
+				return
+			}
+		}
+
+		c.JSON(http.StatusNotFound, gin.H{"error": "Invalid path"})
+		c.Abort()
 	}
-	return nil
 }

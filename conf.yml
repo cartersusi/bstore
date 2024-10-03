@@ -30,5 +30,5 @@ middleware:
   rate_limit_capacity: 100000 # Max Number of Keys(IP Addr) in Memory
   rate_limit:
     enabled: true
-    max_requests: 100
-    duration: 60 # seconds
+    max_requests: 100000
+    duration: 1 # seconds
