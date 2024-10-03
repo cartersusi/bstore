@@ -1,4 +1,8 @@
 # Bstore
+A simple and fast file server for serving blob files.
+* Fast: 
+* Secure: 
+* Efficient: Uses zstd compression for
 
 ## Usage
 1. Clone the repo
