@@ -3,7 +3,6 @@ package fops
 import (
 	"bytes"
 	"io"
-	"log"
 	"os"
 
 	"github.com/klauspost/compress/zstd"
@@ -33,7 +32,6 @@ func Compress(buf *bytes.Buffer, file *os.File, level int, encrypt bool) error {
 
 	var data []byte
 	if encrypt {
-		log.Println("Encrypting data")
 		data, err = Encrypt(buf.Bytes())
 		if err != nil {
 			return err
@@ -41,8 +39,6 @@ func Compress(buf *bytes.Buffer, file *os.File, level int, encrypt bool) error {
 	} else {
 		data = buf.Bytes()
 	}
-
-	log.Println("Done Encrypting data")
 
 	_, err = enc.Write(data)
 	if err != nil {

@@ -1,4 +1,4 @@
-package main
+package bstore
 
 import (
 	"errors"
@@ -29,6 +29,8 @@ type RateLimitConfig struct {
 }
 
 type MiddlewareConfig struct {
+	MaxPathLength     int             `yaml:"max_path_length"`
+	OnlyBstorePaths   bool            `yaml:"only_bstore_paths"`
 	RateLimitCapacity int64           `yaml:"rate_limit_capacity"`
 	RateLimit         RateLimitConfig `yaml:"rate_limit"`
 }
@@ -40,9 +42,8 @@ type ServerCfg struct {
 	PublicBasePath   string           `yaml:"public_base_path"`
 	PrivateBasePath  string           `yaml:"private_base_path"`
 	MaxFileSize      int64            `yaml:"max_file_size"`
-	MaxFileNameLen   int              `yaml:"max_file_name_length"`
 	LogFile          string           `yaml:"log_file"`
-	Encrypt          bool             `yaml:"encryption"`
+	Encrypt          bool             `yaml:"encrypt"`
 	Compress         bool             `yaml:"compress"`
 	CompressionLevel int              `yaml:"compression_lvl"`
 	CORS             CORSConfig       `yaml:"cors"`
@@ -75,6 +76,7 @@ func NewError(code int, message string, err error) *BstoreError {
 }
 
 func HandleError(c *gin.Context, err error) {
+	log.Printf("Error: %v", err)
 	if bstoreError, ok := err.(*BstoreError); ok {
 		c.JSON(bstoreError.Code, gin.H{"error": bstoreError.Message})
 	} else {
@@ -102,7 +104,6 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 	if cfg.ReadWriteKey == "env" || cfg.ReadWriteKey == "" {
 		err = check_rw_key()
 		if err != nil {
-			log.Printf("Error checking read_write_key. Please set the environment variable BSTORE_READ_WRITE_KEY or read_write_key in the configuration file.")
 			return err
 		}
 	}
@@ -112,6 +113,56 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 			return errors.New("BSTORE_ENC_KEY environment variable is not set. Tip: Use $openssl rand -hex 16")
 		}
 
+	}
+
+	if cfg.Host == "" {
+		fmt.Println("Warning: Host is not set.")
+	}
+
+	if cfg.Port == "" {
+		fmt.Println("Warning: Port is not set.")
+	}
+
+	if cfg.PrivateBasePath == "" {
+		fmt.Println("Warning: PrivateBasePath is not set. Files will be stored in the root directory.")
+	}
+	if cfg.PublicBasePath == "" {
+		fmt.Println("Warning: PublicBasePath is not set. Files will be stored in the root directory.")
+	}
+
+	if !cfg.Compress || !cfg.Encrypt {
+		fmt.Println("Warning: Compression and Encryption are disabled. Files will be stored as is.")
+	}
+
+	if cfg.CompressionLevel < 1 || cfg.CompressionLevel > 4 {
+		fmt.Println("Warning: Compression level must be between 1 and 4. Defaulting to 2.")
+		cfg.CompressionLevel = 2
+	}
+
+	if cfg.MaxFileSize < 1 {
+		return errors.New("MaxFileSize must be greater than 0")
+	}
+
+	if cfg.MaxFileSize <= 100000 {
+		fmt.Printf("Warning: MaxFileSize is measured in bytes. The value %d is less than 0.1mb\n", cfg.MaxFileSize)
+	}
+
+	if cfg.MWare.MaxPathLength < 1 {
+		return errors.New("MaxPathLength must be greater than 0")
+	}
+
+	if cfg.MWare.RateLimit.Enabled {
+		if cfg.MWare.RateLimit.MaxRequests < 1 {
+			return errors.New("Rate Limit MaxRequests must be greater than 0")
+		}
+
+		if cfg.MWare.RateLimit.Duration < 1 {
+			return errors.New("Rate Limit Duration must be greater than 0")
+		}
+
+		if cfg.MWare.RateLimitCapacity < 1 {
+			return errors.New("Rate Limit Capacity must be greater than 0")
+		}
 	}
 
 	return nil
@@ -148,6 +199,8 @@ cors:
   allow_credentials: true
   max_age: 3600           #seconds
 middleware:
+  max_path_length: 256
+  only_bstore_paths: true
   rate_limit_capacity: 100000 # Max Number of Keys(IP Addr) in Memory
   rate_limit:
     enabled: true
@@ -176,8 +229,8 @@ middleware:
 		log.Fatal(err)
 	}
 
-	fmt.Println("Encryption key: ", enc_key)
-	fmt.Println("Read Write key: ", read_write_key)
+	fmt.Println("BSTORE_ENC_KEY=", enc_key)
+	fmt.Println("BSTORE_READ_WRITE_KEY=", read_write_key)
 	fmt.Println("Configuration file created: conf.yml")
 	os.Exit(0)
 }
@@ -190,7 +243,6 @@ func (cfg *ServerCfg) Print() {
 	fmt.Printf("PublicBasePath: %s\n", cfg.PublicBasePath)
 	fmt.Printf("PrivateBasePath: %s\n", cfg.PrivateBasePath)
 	fmt.Printf("MaxFileSize: %d mb\n", cfg.MaxFileSize/1024/1024)
-	fmt.Printf("MaxFileNameLen: %d\n", cfg.MaxFileNameLen)
 	fmt.Printf("LogFile: %s\n", filepath.Join(cd, cfg.LogFile))
 	fmt.Printf("Encrypt: %t\n", cfg.Encrypt)
 	fmt.Printf("Compress: %t\n", cfg.Compress)
@@ -203,6 +255,8 @@ func (cfg *ServerCfg) Print() {
 	fmt.Printf("  Allow Credentials: %t\n", cfg.CORS.AllowCredentials)
 	fmt.Printf("  Max Age: %d\n", cfg.CORS.MaxAge)
 	fmt.Printf("Middleware:\n")
+	fmt.Printf("  Max Path Length: %d\n", cfg.MWare.MaxPathLength)
+	fmt.Printf("  Only Bstore Paths: %t\n", cfg.MWare.OnlyBstorePaths)
 	fmt.Printf("  Rate Limit Capacity: %d\n", cfg.MWare.RateLimitCapacity)
 	fmt.Printf("  Rate Limit:\n")
 	fmt.Printf("    Enabled: %t\n", cfg.MWare.RateLimit.Enabled)

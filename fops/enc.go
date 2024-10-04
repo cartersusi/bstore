@@ -6,13 +6,11 @@ import (
 	"crypto/rand"
 	"errors"
 	"io"
-	"log"
 	"os"
 )
 
 func Encrypt(data []byte) ([]byte, error) {
 	key_string := os.Getenv("BSTORE_ENC_KEY")
-	log.Println("Encrypting data", key_string)
 	if key_string == "" {
 		return nil, errors.New("BSTORE_ENC_KEY not set")
 	}
@@ -20,19 +18,16 @@ func Encrypt(data []byte) ([]byte, error) {
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		log.Println("Error creating cipher", err)
 		return nil, err
 	}
 
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
-		log.Println("Error creating GCM", err)
 		return nil, err
 	}
 
 	nonce := make([]byte, gcm.NonceSize())
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		log.Println("Error creating nonce", err)
 		return nil, err
 	}
 

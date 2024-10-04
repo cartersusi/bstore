@@ -1,54 +1,102 @@
 # Bstore
+This code is not meant for production. Only posted as reference. If you like the idea and want to help create a complete package feel free to reach out.
+
+## About 
 A simple and fast file server for serving blob files.
-* Fast: 
-* Secure: 
-* Efficient: Uses zstd compression for
+* Secure: AES 256-bit encryption
+* Efficient: zstd compression
+
+## Use Cases
+* DIY Movies/TV Server
+* PDF Books
+* Data Backups
+
+
+## Example
+```go
+package main
+
+import (
+	"flag"
+	"fmt"
+	"io"
+	"log"
+	"os"
+
+	bst "github.com/cartersusi/bstore" // go pkg
+    //bst "bstore" // clone
+	"github.com/gin-gonic/gin"
+)
+
+func main() {
+	init_file := flag.Bool("init", false, "Create a new configuration file")
+	conf_file := flag.String("config", "conf.yml", "Configuration file")
+	flag.Parse()
+	if *init_file {
+		bst.Init()
+		return
+	}
+
+	bstore := &bst.ServerCfg{}
+	err := bstore.Load(*conf_file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	bstore.Print()
+
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.Default()
+	bstore.Cors(r)
+	bstore.Middleware(r) // Must be used, able to remove/modify all middleware(rate limit, valid path) except read-write key validation
+
+	f, err := os.OpenFile(bstore.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+
+	multiWriter := io.MultiWriter(f, os.Stdout)
+	gin.DefaultWriter = multiWriter
+	r.Use(gin.Logger())
+	log.SetOutput(multiWriter)
+
+	r.Use(bstore.Serve())
+	r.PUT("/api/upload/*file_path", bstore.Upload)
+	r.GET("/api/download/*file_path", bstore.Get)
+	r.DELETE("/api/delete/:file_path", bstore.Delete)
+
+	r.Run(fmt.Sprintf("%s:%s", bstore.Host, bstore.Port))
+}
+```
 
 ## Usage
-1. Clone the repo
-```sh
-git clone https://github.com/cartersusi/bstore.git
+
+1. Generate a Config File and Keys
+```go
+bstore.Init()
 ```
 
-2. Build bstore
-```sh
-cd bstore
-make build
-```
-
-3. Create a read/write key
-```sh
-export BSTORE_READ_WRITE_KEY=$(openssl rand -base64 32)
-echo $BSTORE_READ_WRITE_KEY # copy for later
-```
-
-4. Generate a config File
-```sh
-./bstore -init
-```
-
-5. (Optional) Edit your config file
+- Edit your config file (Optional)
 ```sh
 nvim conf.yml
 ```
 
-6. Run the server
+2. Clone or Import into your gin server
 ```sh
-./bstore
+git clone https://github.com/cartersusi/bstore.git #clone
+go get github.com/cartersusi/bstore #import
 ```
 
 ---
 
 # API Usage
 
-```js
-const readWriteKey = process.env.BSTORE_READ_WRITE_KEY || '';
-var file_path = 'cats/siamese/cat.png'
-```
-
 ## Upload a File
 - Fetch `/api/upload/*` to upload a file
 ```js
+const readWriteKey = process.env.BSTORE_READ_WRITE_KEY || '';
+var file_path = 'cats/siamese/cat.png'
+
 const file = Bun.file(file_path);
 
 const res = await fetch(`https://catlovers.com/api/upload/${file_path}`, {
@@ -65,6 +113,8 @@ const res = await fetch(`https://catlovers.com/api/upload/${file_path}`, {
 ## Download a File
 - Fetch `/api/download/*` to download a file
 ```js
+const readWriteKey = process.env.BSTORE_READ_WRITE_KEY || '';
+
 const res = await fetch(`https://catlovers.com/api/download/${file_path}`, {
     method: 'GET',
     headers: {
@@ -73,12 +123,14 @@ const res = await fetch(`https://catlovers.com/api/download/${file_path}`, {
     },
 });
 const blob = await res.blob();
-await Bun.write("cat_copy.webp", blob);
+await Bun.write("cat_copy.png", blob);
 ```
 
 ## Delete a File
 - Fetch `/api/delete/*` to delete a file
 ```js
+const readWriteKey = process.env.BSTORE_READ_WRITE_KEY || '';
+
 const res = await fetch(`https://catlovers.com/api/delete/${file_path}`, {
     method: 'DELETE',
     headers: {
@@ -98,7 +150,7 @@ const res = await fetch(`https://catlovers.com/api/delete/${file_path}`, {
 ```
 
 ---
-
+<!-- 
 # `bstore` npm package
 
 ## Upload a File
@@ -130,3 +182,5 @@ const res: DeleteBstoreResponse = await del("/books/book.pdf", 'public');
 // delete a directory
 const res: DeleteBstoreResponse = await del("/images/hentai/*", 'private');
 ```
+
+-->

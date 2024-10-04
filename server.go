@@ -1,4 +1,4 @@
-package main
+package bstore
 
 import (
 	"container/list"
@@ -43,7 +43,7 @@ func (bstore *ServerCfg) Cors(r *gin.Engine) {
 }
 
 func (bstore *ServerCfg) Middleware(r *gin.Engine) {
-	r.Use(check_valid_path(bstore.MaxFileNameLen))
+	r.Use(bstore.check_valid_path())
 	if bstore.MWare.RateLimit.Enabled {
 		rateLimiter := NewIPRateLimiter(int(bstore.MWare.RateLimitCapacity))
 		r.Use(checkIPRateLimit(rateLimiter, bstore.MWare.RateLimit.MaxRequests, time.Duration(bstore.MWare.RateLimit.Duration)))
@@ -141,35 +141,39 @@ func checkIPRateLimit(rl *IPRateLimiter, maxRequests int64, duration time.Durati
 	}
 }
 
-func check_valid_path(maxPathLength int) gin.HandlerFunc {
+func (bstore *ServerCfg) check_valid_path() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		path := c.Request.URL.Path
-		if len(path) > maxPathLength {
+		if len(path) > bstore.MWare.MaxPathLength {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Path too long"})
 			c.Abort()
 			return
 		}
 
-		// serve public files, request to direct public files will be blocked.
-		if strings.HasPrefix(path, "/bstore") {
-			c.Next()
-			return
-		}
-
-		validPaths := []string{
-			"/api/upload/",
-			"/api/download/",
-			"/api/delete/",
-		}
-
-		for _, validPath := range validPaths {
-			if strings.HasPrefix(path, validPath) {
+		if bstore.MWare.OnlyBstorePaths {
+			// serve public files, request to direct public files will be blocked.
+			if strings.HasPrefix(path, "/bstore") {
 				c.Next()
 				return
 			}
+
+			validPaths := []string{
+				"/api/upload/",
+				"/api/download/",
+				"/api/delete/",
+			}
+
+			for _, validPath := range validPaths {
+				if strings.HasPrefix(path, validPath) {
+					c.Next()
+					return
+				}
+			}
+
+			c.JSON(http.StatusNotFound, gin.H{"error": "Invalid path"})
+			c.Abort()
 		}
 
-		c.JSON(http.StatusNotFound, gin.H{"error": "Invalid path"})
-		c.Abort()
+		c.Next()
 	}
 }
