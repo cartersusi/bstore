@@ -37,11 +37,6 @@ func (bstore *ServerCfg) Delete(c *gin.Context) {
 		fpath = fpath + ".zst"
 	}
 
-	if info.IsDir() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Cannot delete directory"})
-		return
-	}
-
 	err = os.Remove(fpath)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting file: " + err.Error()})
