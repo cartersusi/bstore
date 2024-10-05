@@ -2,12 +2,10 @@ package bstore
 
 import (
 	"bytes"
-	"errors"
 	"net/http"
 	"os"
-	"path/filepath"
 
-	"github.com/cartersusi/bstore/fops"
+	"github.com/cartersusi/bstore-server/bstore/fops"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,7 +16,7 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 		return
 	}
 
-	fpath, err := bstore.mkdir(validation.Fpath, validation.BasePath)
+	fpath, err := fops.MkDir(validation.Fpath, validation.BasePath, bstore.Compress)
 	if err != nil {
 		HandleError(c, NewError(http.StatusBadRequest, "Error creating directory", err))
 		return
@@ -49,7 +47,7 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 			return
 		}
 	} else {
-		_, err = file.Write(buf.Bytes())
+		err = fops.WriteFile(file, buf.Bytes(), bstore.Encrypt)
 		if err != nil {
 			HandleError(c, NewError(http.StatusInternalServerError, "Error writing data", err))
 			return
@@ -58,25 +56,4 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 
 	file.Sync()
 	c.JSON(http.StatusOK, gin.H{"message": "File uploaded successfully"})
-}
-
-func (bstore *ServerCfg) mkdir(fpath, base_path string) (string, error) {
-	if fpath == "" {
-		return "", errors.New("file path is required")
-	}
-
-	fpath = filepath.Join(base_path, fpath)
-	if bstore.Compress {
-		fpath += ".zst"
-	}
-
-	dir := filepath.Dir(fpath)
-	if dir == "" {
-		return "", errors.New("error getting directory")
-	}
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		return "", errors.New("error creating directory")
-	}
-
-	return fpath, nil
 }

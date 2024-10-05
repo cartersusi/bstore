@@ -1,6 +1,7 @@
 package fops
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -8,6 +9,21 @@ import (
 	"io"
 	"os"
 )
+
+func DecryptFile(fpath string) ([]byte, error) {
+	file, err := os.Open(fpath)
+	if err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	_, err = io.Copy(&buf, file)
+	if err != nil {
+		return nil, err
+	}
+
+	return Decrypt(buf.Bytes())
+}
 
 func Encrypt(data []byte) ([]byte, error) {
 	key_string := os.Getenv("BSTORE_ENC_KEY")

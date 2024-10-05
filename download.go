@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cartersusi/bstore/fops"
+	"github.com/cartersusi/bstore-server/bstore/fops"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,25 +17,46 @@ func (bstore *ServerCfg) Get(c *gin.Context) {
 	}
 
 	fpath := filepath.Join(validation.BasePath, validation.Fpath)
-	originalPath := fpath
-	zstPath := fpath + ".zst"
 
-	if info, err := os.Stat(originalPath); err == nil {
-		if !info.IsDir() {
-			c.File(originalPath)
-			return
-		}
+	info, err := os.Stat(fpath)
+	if err == nil && !info.IsDir() {
+		download(c, fpath, false, bstore.Encrypt)
+		return
 	}
 
-	if info, err := os.Stat(zstPath); err == nil && !info.IsDir() {
-		content, err := fops.Decompress(zstPath, bstore.Encrypt)
+	fpath += ".zst"
+	info, err = os.Stat(fpath)
+	if err == nil && !info.IsDir() {
+		download(c, fpath, true, bstore.Encrypt)
+		return
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+}
+
+func download(c *gin.Context, fpath string, isCompressed bool, isEncrypted bool) {
+	if !isEncrypted && !isCompressed {
+		c.File(fpath)
+		return
+	}
+
+	if isEncrypted && !isCompressed {
+		content, err := fops.DecryptFile(fpath)
 		if err != nil {
-			HandleError(c, NewError(http.StatusInternalServerError, "Error decompressing file", err))
+			HandleError(c, NewError(http.StatusInternalServerError, "Error decrypting file", err))
 			return
 		}
 		c.Data(http.StatusOK, "application/octet-stream", content)
 		return
 	}
 
-	c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
+	content, err := fops.Decompress(fpath, isEncrypted)
+	if err != nil {
+		HandleError(c, NewError(http.StatusInternalServerError, "Error decompressing file", err))
+		return
+	}
+
+	c.Data(http.StatusOK, "application/octet-stream", content)
+	return
+
 }
