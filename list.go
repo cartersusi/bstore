@@ -34,7 +34,7 @@ func (bstore *ServerCfg) List(c *gin.Context) {
 		return
 	}
 
-	all_files, err := list_files(validation.BasePath, dirpath)
+	all_files, err := list_files(dirpath)
 	if err != nil {
 		HandleError(c, NewError(http.StatusInternalServerError, "Error listing files", err))
 		return
@@ -43,7 +43,7 @@ func (bstore *ServerCfg) List(c *gin.Context) {
 	c.JSON(http.StatusOK, ListResponse{Files: all_files})
 }
 
-func list_files(basePath, dirPath string) ([]string, error) {
+func list_files(dirPath string) ([]string, error) {
 	var fileList []string
 
 	err := filepath.Walk(dirPath, func(path string, info fs.FileInfo, err error) error {

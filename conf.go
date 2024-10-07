@@ -274,6 +274,7 @@ func (bstore *ServerCfg) ValidateReq(c *gin.Context) ReqValidation {
 	if fpath == "" {
 		ret.Err = errors.New("file_path is required")
 		ret.HttpStatus = http.StatusBadRequest
+		return ret
 	}
 
 	ret.Fpath = fpath
