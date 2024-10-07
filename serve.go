@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cartersusi/bstore-server/bstore/fops"
+	"github.com/cartersusi/bstore/fops"
 	"github.com/gin-gonic/gin"
 )
 
