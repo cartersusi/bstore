@@ -12,6 +12,17 @@ A simple and fast file server for serving blob files.
 * Data Backups
 
 
+## APIs
+- [bstorejs](https://github.com/cartersusi/bstorejs.git) - Express/Vanilla Js/Ts APIs
+```sh
+npm i bstorejs
+```
+- [bstorejs-react](https://github.com/cartersusi/bstorejs-react.git) - React Server Actions & Components
+```sh
+npm i bstorejs-react
+```
+
+
 ## Example
 ```go
 package main
@@ -85,68 +96,6 @@ nvim conf.yml
 ```sh
 git clone https://github.com/cartersusi/bstore.git #clone
 go get github.com/cartersusi/bstore #import
-```
-
----
-
-# API Usage
-
-## Upload a File
-- Fetch `/api/upload/*` to upload a file
-```js
-const readWriteKey = process.env.BSTORE_READ_WRITE_KEY || '';
-var file_path = 'cats/siamese/cat.png'
-
-const file = Bun.file(file_path);
-
-const res = await fetch(`https://catlovers.com/api/upload/${file_path}`, {
-    method: 'PUT',
-    headers: {
-        'X-access': 'public',
-        'Authorization': `Bearer ${readWriteKey}`,
-        'Content-Type': file.type,
-      },
-    body: file,
-});
-```
-
-## Download a File
-- Fetch `/api/download/*` to download a file
-```js
-const readWriteKey = process.env.BSTORE_READ_WRITE_KEY || '';
-
-const res = await fetch(`https://catlovers.com/api/download/${file_path}`, {
-    method: 'GET',
-    headers: {
-        'X-access': 'public',
-        'Authorization': `Bearer ${readWriteKey}`,
-    },
-});
-const blob = await res.blob();
-await Bun.write("cat_copy.png", blob);
-```
-
-## Delete a File
-- Fetch `/api/delete/*` to delete a file
-```js
-const readWriteKey = process.env.BSTORE_READ_WRITE_KEY || '';
-
-const res = await fetch(`https://catlovers.com/api/delete/${file_path}`, {
-    method: 'DELETE',
-    headers: {
-        'X-access': 'public',
-        'Authorization': `Bearer ${readWriteKey}`,
-    },
-});
-```
-
----
-
-# Serve a File
-```html
-<img src="https://catlovers.com/bstore/cats/siamese/cat.png" alt="Siamese Cat" className="max-w-full max-h-full object-contain" />
-<video src="https://catlovers.com/bstore/homepage/cats.mp4" controls className="max-w-full max-h-full" />
-<embed src="https://catlovers.com/bstore/info/cats.pdf" type="application/pdf" width="100%" height="600px" />
 ```
 
 ---
