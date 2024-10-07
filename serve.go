@@ -13,7 +13,6 @@ import (
 func (bstore *ServerCfg) Serve() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// no rw priv needed for public files
-
 		path := strings.Replace(c.Request.URL.Path, "bstore", bstore.PublicBasePath, 1)
 
 		if !strings.HasPrefix(path, "/"+bstore.PublicBasePath) {
