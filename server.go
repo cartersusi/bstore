@@ -87,6 +87,7 @@ func validateReadWriteKey(validKey string) gin.HandlerFunc {
 		"/api/upload/",
 		"/api/download/",
 		"/api/delete/",
+		"/api/list/",
 	}
 
 	return func(c *gin.Context) {
@@ -166,6 +167,7 @@ func (bstore *ServerCfg) check_valid_path() gin.HandlerFunc {
 				"/api/upload/",
 				"/api/download/",
 				"/api/delete/",
+				"/api/list/",
 			}
 
 			for _, validPath := range validPaths {
