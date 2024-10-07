@@ -29,7 +29,7 @@ func (bstore *ServerCfg) List(c *gin.Context) {
 		return
 	}
 
-	if err == nil && !info.IsDir() {
+	if !info.IsDir() {
 		c.JSON(http.StatusOK, ListResponse{Files: []string{validation.Fpath}})
 		return
 	}
