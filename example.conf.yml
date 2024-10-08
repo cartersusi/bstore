@@ -1,6 +1,5 @@
 
 host: localhost
-port: 8080
 read_write_key: "env" # "env" or "my_read_write_key", gen key with $openssl rand -base64 32
 public_base_path: pub/bstore
 private_base_path: priv/bstore

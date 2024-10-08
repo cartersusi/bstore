@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v2"
@@ -36,7 +37,6 @@ type MiddlewareConfig struct {
 }
 
 type ServerCfg struct {
-	Port             string           `yaml:"port"`
 	Host             string           `yaml:"host"`
 	ReadWriteKey     string           `yaml:"read_write_key"`
 	PublicBasePath   string           `yaml:"public_base_path"`
@@ -119,10 +119,6 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 		fmt.Println("Warning: Host is not set.")
 	}
 
-	if cfg.Port == "" {
-		fmt.Println("Warning: Port is not set.")
-	}
-
 	if cfg.PrivateBasePath == "" {
 		fmt.Println("Warning: PrivateBasePath is not set. Files will be stored in the root directory.")
 	}
@@ -170,8 +166,7 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 
 func Init() {
 	init_yaml := `
-host: localhost
-port: 8080
+host: localhost:8080
 read_write_key: "env" # "env" or "my_read_write_key", gen key with $openssl rand -base64 32
 public_base_path: pub/bstore
 private_base_path: priv/bstore
@@ -237,7 +232,6 @@ middleware:
 
 func (cfg *ServerCfg) Print() {
 	cd, _ := os.Getwd()
-	fmt.Printf("Port: %s\n", cfg.Port)
 	fmt.Printf("Host: %s\n", cfg.Host)
 	fmt.Printf("ReadWriteKey: %s\n", cfg.ReadWriteKey)
 	fmt.Printf("PublicBasePath: %s\n", cfg.PublicBasePath)
@@ -281,6 +275,17 @@ func (bstore *ServerCfg) ValidateReq(c *gin.Context) ReqValidation {
 	ret.BasePath = bstore.get_base_path(c.Request.Header.Get("X-access"))
 
 	return ret
+}
+
+func (bstore *ServerCfg) MakeUrl(c *gin.Context, fpath string) string {
+	url := fmt.Sprintf("%s/bstore%s", c.Request.Host, fpath)
+	url = strings.Replace(url, "//", "/", -1)
+
+	var is_https = c.Request.TLS
+	if is_https != nil {
+		return fmt.Sprintf("https://%s", url)
+	}
+	return fmt.Sprintf("http://%s", url)
 }
 
 func (bstore *ServerCfg) get_base_path(x_access string) string {

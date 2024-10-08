@@ -2,7 +2,6 @@ package bstore
 
 import (
 	"container/list"
-	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -145,18 +144,14 @@ func checkIPRateLimit(rl *IPRateLimiter, maxRequests int64, duration time.Durati
 
 func (bstore *ServerCfg) check_valid_path() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		fmt.Println("check_valid_path")
 		path := c.Request.URL.Path
-		fmt.Println(path)
 		if len(path) > bstore.MWare.MaxPathLength {
-			fmt.Println("Path too long")
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Path too long"})
 			c.Abort()
 			return
 		}
 
 		if bstore.MWare.OnlyBstorePaths {
-			fmt.Println("OnlyBstorePaths")
 			// serve public files, request to direct public files will be blocked.
 			if strings.HasPrefix(path, "/bstore") {
 				c.Next()
@@ -171,15 +166,12 @@ func (bstore *ServerCfg) check_valid_path() gin.HandlerFunc {
 			}
 
 			for _, validPath := range validPaths {
-				fmt.Println(validPath)
 				if strings.HasPrefix(path, validPath) {
-					fmt.Println("Valid path")
 					c.Next()
 					return
 				}
 			}
 
-			fmt.Println("Invalid path")
 			c.JSON(http.StatusNotFound, gin.H{"error": "Invalid path"})
 			c.Abort()
 		}

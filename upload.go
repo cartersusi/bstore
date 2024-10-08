@@ -9,6 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type UploadRespone struct {
+	Url string `json:"url"`
+}
+
 func (bstore *ServerCfg) Upload(c *gin.Context) {
 	validation := bstore.ValidateReq(c)
 	if validation.Err != nil {
@@ -55,5 +59,5 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 	}
 
 	file.Sync()
-	c.JSON(http.StatusOK, gin.H{"message": "File uploaded successfully"})
+	c.JSON(http.StatusOK, UploadRespone{Url: bstore.MakeUrl(c, validation.Fpath)})
 }
