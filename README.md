@@ -16,8 +16,8 @@
 ## About 
 ### **Fast**: 
 **1mb** files on a **8c/16t** server with **encryption** and **compression** using [bstorejs]((https://www.npmjs.com/package/bstorejs)).
-- Upload: 924/s
-- Download: 617/s
+- Upload: 924 upload/s
+- Download: 617 upload/s
 
 ### **Secure**: 
   * AES 256-bit encryption
