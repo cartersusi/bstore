@@ -22,17 +22,6 @@
 * PDF Books
 * Data Backups
 
-
-## APIs
-- [bstorejs](https://github.com/cartersusi/bstorejs.git) - Express/Vanilla Js/Ts APIs
-```sh
-npm i bstorejs
-```
-- [bstorejs-react](https://github.com/cartersusi/bstorejs-react.git) - React Server Actions & Components
-```sh
-npm i bstorejs-react
-```
-
 ## Usage
 
 1. **Clone Repository**
@@ -66,7 +55,15 @@ nvim conf.yml
 ./bstore -config new_conf.yml
 ```
 
----
+## APIs
+- [bstorejs](https://github.com/cartersusi/bstorejs.git) - Express/Vanilla Js/Ts APIs
+```sh
+npm i bstorejs
+```
+- [bstorejs-react](https://github.com/cartersusi/bstorejs-react.git) - React Server Actions & Components
+```sh
+npm i bstorejs-react
+```
 <!-- 
 # `bstore` npm package
 
