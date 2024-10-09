@@ -29,7 +29,7 @@
 git clone https://github.com/cartersusi/bstore.git
 ```
 
-2. **Build For your OS**
+2. **Build For your OS (Requires Go)**
 ```sh
 cd bstore
 make build
