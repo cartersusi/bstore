@@ -15,9 +15,13 @@
 
 ## About 
 ### **Fast**: 
-**1mb** files on a **8c/16t** server with **encryption** and **compression** using [bstorejs](https://www.npmjs.com/package/bstorejs).
-- Upload: 924 upload/s
-- Download: 617 upload/s
+**1mb** files **encrypted** and **compressed**.
+
+|Storage|Tier|Upload|Download|
+|-|-|-|-|
+[bstorejs](https://www.npmjs.com/package/bstorejs) | 8c/16t | 924 upload/s | 617 download/s|
+[@vecel/blob](https://www.npmjs.com/package/@vercel/blob)| Free | 4.1 upload/s | 57 download/s |
+[@aws-sdk/client-s3](https://www.npmjs.com/package/@aws-sdk/client-s3)| Free | 5.3 upload/s | 72 download/s |
 
 ### **Secure**: 
   * AES 256-bit encryption
