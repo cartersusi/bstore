@@ -1,8 +1,10 @@
 package bstore
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,6 +18,7 @@ type ListResponse struct {
 }
 
 func (bstore *ServerCfg) List(c *gin.Context) {
+	log.Println("Valid List Request for", c.Request.URL.Path)
 	validation := bstore.ValidateReq(c)
 	if validation.Err != nil {
 		HandleError(c, NewError(validation.HttpStatus, validation.Err.Error(), nil))
@@ -25,15 +28,16 @@ func (bstore *ServerCfg) List(c *gin.Context) {
 	dirpath := filepath.Join(validation.BasePath, validation.Fpath)
 	info, err := os.Stat(dirpath)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Directory not found"})
+		HandleError(c, NewError(http.StatusNotFound, "Directory not found", err))
 		return
 	}
 
 	if !info.IsDir() {
-		c.JSON(http.StatusOK, ListResponse{Files: []string{validation.Fpath}})
+		HandleError(c, NewError(http.StatusBadRequest, "Path is not a directory", errors.New("Path is not a directory")))
 		return
 	}
 
+	log.Println("Listing files in", dirpath)
 	all_files, err := list_files(dirpath)
 	if err != nil {
 		HandleError(c, NewError(http.StatusInternalServerError, "Error listing files", err))

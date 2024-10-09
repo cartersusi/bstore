@@ -1,9 +1,8 @@
-
-host: localhost
-read_write_key: "env" # "env" or "my_read_write_key", gen key with $openssl rand -base64 32
+host: localhost:8080
+keys: "keys.env" # "env" or "<filename>"
 public_base_path: pub/bstore
 private_base_path: priv/bstore
-max_file_size: 1000000000 # bytes
+max_file_size: 100000000 # bytes
 max_file_name_length: 256 
 log_file: bstore.log
 encrypt: true

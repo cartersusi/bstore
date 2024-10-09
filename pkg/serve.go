@@ -1,18 +1,20 @@
 package bstore
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/cartersusi/bstore/fops"
+	"github.com/cartersusi/bstore/pkg/fops"
 	"github.com/gin-gonic/gin"
 )
 
 func (bstore *ServerCfg) Serve() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// no rw priv needed for public files
+		log.Println("Valid Serve Request for", c.Request.URL.Path)
 		path := strings.Replace(c.Request.URL.Path, "bstore", bstore.PublicBasePath, 1)
 
 		if !strings.HasPrefix(path, "/"+bstore.PublicBasePath) {
@@ -42,6 +44,7 @@ func (bstore *ServerCfg) Serve() gin.HandlerFunc {
 			}
 			contentType := http.DetectContentType(content)
 			c.Header("Content-Type", contentType)
+			log.Println("Serving file at", fpath)
 			c.Data(http.StatusOK, contentType, content)
 		} else {
 			file, err := os.Open(fpath)
@@ -50,6 +53,7 @@ func (bstore *ServerCfg) Serve() gin.HandlerFunc {
 				return
 			}
 			defer file.Close()
+			log.Println("Serving file at", fpath)
 			http.ServeContent(c.Writer, c.Request, info.Name(), info.ModTime(), file)
 		}
 	}

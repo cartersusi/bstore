@@ -33,80 +33,37 @@ npm i bstorejs
 npm i bstorejs-react
 ```
 
-
-## Example
-```go
-package main
-
-import (
-	"flag"
-	"fmt"
-	"io"
-	"log"
-	"os"
-
-	bst "github.com/cartersusi/bstore" // go pkg
-    //bst "bstore" // clone
-	"github.com/gin-gonic/gin"
-)
-
-func main() {
-	init_file := flag.Bool("init", false, "Create a new configuration file")
-	conf_file := flag.String("config", "conf.yml", "Configuration file")
-	flag.Parse()
-	if *init_file {
-		bst.Init()
-		return
-	}
-
-	bstore := &bst.ServerCfg{}
-	err := bstore.Load(*conf_file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	bstore.Print()
-
-	gin.SetMode(gin.ReleaseMode)
-	r := gin.Default()
-	bstore.Cors(r)
-	bstore.Middleware(r) // Must be used, able to remove/modify all middleware(rate limit, valid path) except read-write key validation
-
-	f, err := os.OpenFile(bstore.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	multiWriter := io.MultiWriter(f, os.Stdout)
-	gin.DefaultWriter = multiWriter
-	r.Use(gin.Logger())
-	log.SetOutput(multiWriter)
-
-	r.Use(bstore.Serve())
-	r.PUT("/api/upload/*file_path", bstore.Upload)
-	r.GET("/api/download/*file_path", bstore.Get)
-	r.DELETE("/api/delete/:file_path", bstore.Delete)
-
-	r.Run(fmt.Sprintf("%s:%s", bstore.Host, bstore.Port))
-}
-```
-
 ## Usage
 
-1. Generate a Config File and Keys
-```go
-bstore.Init()
+1. **Clone Repository**
+```sh
+git clone https://github.com/cartersusi/bstore.git
 ```
 
-- Edit your config file (Optional)
+2. **Build For your OS**
+```sh
+cd bstore
+make build
+```
+
+3. **Generate a Config File and Keys**
+```go
+./bstore -init
+```
+
+- **Edit your config file (Optional)**
 ```sh
 nvim conf.yml
 ```
 
-2. Clone or Import into your gin server
+4. **Start Server**
 ```sh
-git clone https://github.com/cartersusi/bstore.git #clone
-go get github.com/cartersusi/bstore #import
+./bstore
+```
+
+- **Use a different config**
+```sh
+./bstore -config new_conf.yml
 ```
 
 ---

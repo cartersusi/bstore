@@ -1,6 +1,7 @@
 package bstore
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 )
 
 func (bstore *ServerCfg) Delete(c *gin.Context) {
+	log.Println("Valid Delete Request for", c.Request.URL.Path)
 	validation := bstore.ValidateReq(c)
 	if validation.Err != nil {
 		HandleError(c, NewError(validation.HttpStatus, validation.Err.Error(), nil))
@@ -17,6 +19,7 @@ func (bstore *ServerCfg) Delete(c *gin.Context) {
 	}
 
 	fpath := filepath.Join(validation.BasePath, validation.Fpath)
+	log.Println("Deleting file at", fpath)
 
 	info, err := os.Stat(fpath)
 	if err == nil && !info.IsDir() {
@@ -40,6 +43,7 @@ func rm(c *gin.Context, fpath string) {
 		return
 	}
 
+	log.Println("File deleted at", fpath)
 	c.JSON(http.StatusOK, gin.H{"message": "File deleted successfully"})
 	return
 }
@@ -63,6 +67,7 @@ func rmdir(c *gin.Context, fpath string) {
 		return
 	}
 
+	log.Println("Directory deleted at", del_path)
 	c.JSON(http.StatusOK, gin.H{"message": "Directory deleted successfully"})
 	return
 }

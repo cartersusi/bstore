@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v2"
 )
 
@@ -38,7 +39,7 @@ type MiddlewareConfig struct {
 
 type ServerCfg struct {
 	Host             string           `yaml:"host"`
-	ReadWriteKey     string           `yaml:"read_write_key"`
+	Keys             string           `yaml:"keys"`
 	PublicBasePath   string           `yaml:"public_base_path"`
 	PrivateBasePath  string           `yaml:"private_base_path"`
 	MaxFileSize      int64            `yaml:"max_file_size"`
@@ -76,7 +77,7 @@ func NewError(code int, message string, err error) *BstoreError {
 }
 
 func HandleError(c *gin.Context, err error) {
-	log.Printf("Error: %v", err)
+	log.Printf("Error: %v\n", err)
 	if bstoreError, ok := err.(*BstoreError); ok {
 		c.JSON(bstoreError.Code, gin.H{"error": bstoreError.Message})
 	} else {
@@ -101,18 +102,9 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 		return err
 	}
 
-	if cfg.ReadWriteKey == "env" || cfg.ReadWriteKey == "" {
-		err = check_rw_key()
-		if err != nil {
-			return err
-		}
-	}
-
-	if cfg.Encrypt {
-		if os.Getenv("BSTORE_ENC_KEY") == "" {
-			return errors.New("BSTORE_ENC_KEY environment variable is not set. Tip: Use $openssl rand -hex 16")
-		}
-
+	err = cfg.check_keys()
+	if err != nil {
+		return err
 	}
 
 	if cfg.Host == "" {
@@ -165,9 +157,8 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 }
 
 func Init() {
-	init_yaml := `
-host: localhost:8080
-read_write_key: "env" # "env" or "my_read_write_key", gen key with $openssl rand -base64 32
+	init_yaml := `host: localhost:8080
+keys: "keys.env" # "env" or "<filename>"
 public_base_path: pub/bstore
 private_base_path: priv/bstore
 max_file_size: 100000000 # bytes
@@ -202,7 +193,7 @@ middleware:
     max_requests: 100
     duration: 60 # seconds
 `
-	log.Println("Creating configuration file: conf.yml")
+	fmt.Println("Creating configuration file: conf.yml")
 	f, err := os.Create("conf.yml")
 	if err != nil {
 		log.Fatal(err)
@@ -224,16 +215,35 @@ middleware:
 		log.Fatal(err)
 	}
 
-	fmt.Println("BSTORE_ENC_KEY=", enc_key)
-	fmt.Println("BSTORE_READ_WRITE_KEY=", read_write_key)
+	enc_key = strings.TrimSuffix(enc_key, "\n")
+	read_write_key = strings.TrimSuffix(read_write_key, "\n")
+
+	fmt.Println("Creating encryption and read/write keys file: keys.env")
+	f, err = os.Create("keys.env")
+	defer f.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = f.WriteString(fmt.Sprintf("BSTORE_ENC_KEY=\"%s\"\n", enc_key))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = f.WriteString(fmt.Sprintf("BSTORE_READ_WRITE_KEY=\"%s\"", read_write_key))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	fmt.Println("Configuration file created: conf.yml")
+	fmt.Println("Encryption key created: keys.env")
 	os.Exit(0)
 }
 
 func (cfg *ServerCfg) Print() {
 	cd, _ := os.Getwd()
 	fmt.Printf("Host: %s\n", cfg.Host)
-	fmt.Printf("ReadWriteKey: %s\n", cfg.ReadWriteKey)
+	fmt.Printf("Keys: %s\n", cfg.Keys)
 	fmt.Printf("PublicBasePath: %s\n", cfg.PublicBasePath)
 	fmt.Printf("PrivateBasePath: %s\n", cfg.PrivateBasePath)
 	fmt.Printf("MaxFileSize: %d mb\n", cfg.MaxFileSize/1024/1024)
@@ -262,6 +272,10 @@ func GetConfig(c *gin.Context) *ServerCfg {
 	return c.MustGet("config").(*ServerCfg)
 }
 
+func (bstore *ServerCfg) GetAccess(c *gin.Context) string {
+	return c.Request.Header.Get("X-access")
+}
+
 func (bstore *ServerCfg) ValidateReq(c *gin.Context) ReqValidation {
 	var ret ReqValidation
 	fpath := c.Param("file_path")
@@ -272,7 +286,7 @@ func (bstore *ServerCfg) ValidateReq(c *gin.Context) ReqValidation {
 	}
 
 	ret.Fpath = fpath
-	ret.BasePath = bstore.get_base_path(c.Request.Header.Get("X-access"))
+	ret.BasePath = bstore.get_base_path(bstore.GetAccess(c))
 
 	return ret
 }
@@ -295,16 +309,40 @@ func (bstore *ServerCfg) get_base_path(x_access string) string {
 	return bstore.PrivateBasePath
 }
 
-func (bstore *ServerCfg) GetRWKey() string {
-	if bstore.ReadWriteKey == "env" || bstore.ReadWriteKey == "" {
-		return os.Getenv("BSTORE_READ_WRITE_KEY")
+func (bstore *ServerCfg) keys_in_file() bool {
+	if bstore.Keys != "env" {
+		return true
 	}
-	return bstore.ReadWriteKey
+	return false
 }
 
-func check_rw_key() error {
+func (bstore *ServerCfg) GetRWKey() string {
+	//if bstore.keys_in_file() {
+	//	fmt.Printf("Loading keys from file: %s\n", bstore.Keys)
+	//	err := godotenv.Load(bstore.Keys)
+	//	if err != nil {
+	//		log.Fatal("Error loading .env file")
+	//	}
+	//}
+	return os.Getenv("BSTORE_READ_WRITE_KEY")
+}
+
+func (bstore *ServerCfg) check_keys() error {
+	if bstore.keys_in_file() {
+		fmt.Printf("Loading keys from file: %s\n", bstore.Keys)
+
+		// Pretty sure this is global, GetRWKey() works without reloading the file
+		err := godotenv.Load(bstore.Keys)
+		if err != nil {
+			log.Fatal("Error loading .env file")
+		}
+	}
+
 	if os.Getenv("BSTORE_READ_WRITE_KEY") == "" {
 		return errors.New("BSTORE_READ_WRITE_KEY environment variable is not set")
+	}
+	if os.Getenv("BSTORE_ENC_KEY") == "" && bstore.Encrypt {
+		return errors.New("BSTORE_ENC_KEY environment variable is not set")
 	}
 	return nil
 }

@@ -1,5 +1,6 @@
 bstore
 .DS_Store
+conf.yml
 
 *.log
 *.gz
@@ -11,11 +12,9 @@ bstore
 *.json
 *.csv
 *.sh
+*.env
 
 input/
 output/
 pub/
 priv/
-client/
-simple/
-bstorage/
