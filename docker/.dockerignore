@@ -1,0 +1,43 @@
+# Logs and Testing Files
+bstore
+.DS_Store
+keys.env
+notes.md
+*.log
+*.gz
+*.png
+*.mov
+*.zst
+*.pdf
+*.txt
+*.json
+*.csv
+*.sh
+
+# Testing Directories
+input/
+output/
+pub/
+priv/
+
+# Production Binaries
+prod/
+
+# Git-related files
+.git
+.gitignore
+
+# Docker-related files
+Dockerfile
+.dockerignore
+
+# Go build cache and test files
+*.test
+*.out
+
+# IDE-specific files
+.idea/
+.vscode/
+
+# Dependency directories (uncomment if you're not using go modules)
+# vendor/

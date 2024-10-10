@@ -1,9 +1,8 @@
+# Logs and Testing Files
 bstore
 .DS_Store
-conf.yml
 keys.env
-
-# Logs and Testing Files
+notes.md
 *.log
 *.gz
 *.png

@@ -1,0 +1,35 @@
+host: 0.0.0.0:8080
+keys: "env"
+public_base_path: data/pub
+private_base_path: data/priv
+max_file_size: 100000000 # 95.37 MB
+max_file_name_length: 256 
+log_file: bstore.log
+encrypt: true
+compress: true
+compression_lvl: 2 # 1-4
+cors:
+  allow_origins: 
+    - "*"
+  allow_methods: 
+    - "GET"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+  allow_headers: 
+    - "Content-Type"
+    - "Authorization"
+    - "X-Access"
+  expose_headers: 
+    - "Content-Type"
+    - "Authorization"
+  allow_credentials: true
+  max_age: 3600           #seconds
+middleware:
+  max_path_length: 256
+  only_bstore_paths: true
+  rate_limit_capacity: 100000 # Max Number of Keys(IP Addr) in Memory
+  rate_limit:
+    enabled: true
+    max_requests: 100
+    duration: 60 # seconds

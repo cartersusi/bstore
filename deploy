@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+
+platform=$(uname -ms)
+
+# Reset
+Color_Off=''
+
+# Regular Colors
+Red=''
+Green=''
+Dim='' # White
+
+# Bold
+Bold_White=''
+Bold_Green=''
+
+if [[ -t 1 ]]; then
+    # Reset
+    Color_Off='\033[0m' # Text Reset
+
+    # Regular Colors
+    Red='\033[0;31m'   # Red
+    Green='\033[0;32m' # Green
+    Dim='\033[0;2m'    # White
+
+    # Bold
+    Bold_Green='\033[1;32m' # Bold Green
+    Bold_White='\033[1m'    # Bold White
+fi
+
+error() {
+    echo -e "${Red}error${Color_Off}:" "$@" >&2
+    exit 1
+}
+
+warning() {
+    echo -e "${Red}warning${Color_Off}:" "$@" >&2
+}
+
+info() {
+    echo -e "${Dim}$@ ${Color_Off}"
+}
+
+info_bold() {
+    echo -e "${Bold_White}$@ ${Color_Off}"
+}
+
+success() {
+    echo -e "${Green}$@ ${Color_Off}"
+}
+
+# Check dependencies
+info "Checking dependencies..."
+if ! command -v docker &> /dev/null
+then
+    error "docker could not be found"
+fi
+success "docker found"
+
+if ! command -v docker-compose &> /dev/null
+then
+    error "docker could not be found"
+fi
+success "docker-compose found"
+
+if ! command -v openssl &> /dev/null
+then
+    error "openssl could not be found"
+fi
+success "openssl found"
+
+if ! command -v go &> /dev/null
+then
+    error "go could not be found"
+fi
+success "go found"
+
+# Copy files
+info "Copying files..."
+cp -R docker/. ./
+
+# Check files
+info "Checking files..."
+if [ ! -f "conf.yml" ]; then
+    error "conf.yml not found"
+fi
+success "conf.yml found"
+
+if [ ! -f "Dockerfile" ]; then
+    error "Dockerfile not found"
+fi
+success "Dockerfile found"
+
+if [ ! -f ".dockerignore" ]; then
+    error ".dockerignore not found"
+fi
+success ".dockerignore found"
+
+# Generate keys
+info "Generating keys..."
+BSTORE_ENC_KEY=$(openssl rand -hex 16)
+BSTORE_READ_WRITE_KEY=$(openssl rand -base64 32)
+
+if [ -z "$BSTORE_ENC_KEY" ] || [ -z "$BSTORE_READ_WRITE_KEY" ]; then
+    error "Error: Unable to generate keys"
+fi
+success "BSTORE_ENC_KEY: $BSTORE_ENC_KEY"
+success "BSTORE_READ_WRITE_KEY: $BSTORE_READ_WRITE_KEY"
+
+# Get host port
+HOST_PORT=$(grep "^host:" "conf.yml" | cut -d':' -f3 | tr -d '[:space:]')
+
+if [ -z "$HOST_PORT" ]; then
+    error "Error: Unable to find host port in config file"
+fi
+success "Found host port: $HOST_PORT"
+
+# Build the Docker image
+info "Building Docker image..."
+docker build -t bstore-server .
+
+# Start server
+info "Starting server on port $HOST_PORT..."
+docker run -p 8080:8080 \
+  -e BSTORE_READ_WRITE_KEY=$(openssl rand -base64 32) \
+  -e BSTORE_ENC_KEY=$(openssl rand -hex 16) \
+  bstore-server
