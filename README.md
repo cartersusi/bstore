@@ -36,8 +36,6 @@
 |darwin-arm64|(8.09 MB)|
 |linux-arm64|(7.94 MB)|
 |linux-amd64|(8.25 MB)|
-|windows-amd64|(8.49 MB)|
-|windows-arm64|(7.96 MB)|
 
 ## Use Cases
 * DIY Movies/TV Server
