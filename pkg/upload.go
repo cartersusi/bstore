@@ -11,7 +11,8 @@ import (
 )
 
 type UploadRespone struct {
-	Url string `json:"url"`
+	Url     string `json:"url"`
+	Message string `json:"message"`
 }
 
 func (bstore *ServerCfg) Upload(c *gin.Context) {
@@ -61,12 +62,17 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 		}
 	}
 
-	url := "PRIVATE"
+	upload_response := &UploadRespone{}
+	upload_response.Url = "UNAUTHORIZED"
 	if bstore.GetAccess(c) != "private" {
-		url = bstore.MakeUrl(c, validation.Fpath)
+		upload_response.Url = bstore.MakeUrl(c, validation.Fpath)
+		upload_response.Message = "Public File Uploaded Successfully"
+		log.Printf("Public file (%s) uploaded successfully to: %s\n", upload_response.Url, fpath)
+	} else {
+		upload_response.Message = "Private File Uploaded Successfully. No URL available"
+		log.Printf("Private file (UNAUTHORIZED) uploaded successfully to: %s\n", fpath)
 	}
-	log.Printf("File %s uploaded successfully to: %s\n", fpath, url)
 
 	file.Sync()
-	c.JSON(http.StatusOK, UploadRespone{Url: url})
+	c.JSON(http.StatusOK, upload_response)
 }

@@ -14,7 +14,9 @@ import (
 )
 
 type ListResponse struct {
-	Files []string `json:"files"`
+	Files   []string `json:"files"`
+	Length  int      `json:"length"`
+	Message string   `json:"message"`
 }
 
 func (bstore *ServerCfg) List(c *gin.Context) {
@@ -38,13 +40,17 @@ func (bstore *ServerCfg) List(c *gin.Context) {
 	}
 
 	log.Println("Listing files in", dirpath)
-	all_files, err := list_files(dirpath)
+
+	list_response := &ListResponse{}
+	list_response.Files, err = list_files(dirpath)
 	if err != nil {
 		HandleError(c, NewError(http.StatusInternalServerError, "Error listing files", err))
 		return
 	}
 
-	c.JSON(http.StatusOK, ListResponse{Files: all_files})
+	list_response.Length = len(list_response.Files)
+	list_response.Message = "Files listed successfully from " + validation.Fpath
+	c.JSON(http.StatusOK, list_response)
 }
 
 func list_files(dirPath string) ([]string, error) {
