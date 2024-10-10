@@ -375,14 +375,6 @@ func (cfg *ServerCfg) handle_basepaths() error {
 	if cfg.PrivateBasePath == "" {
 		fmt.Println("Warning: PrivateBasePath is not set. Files will be stored in the root directory.")
 	}
-	if _, err := os.Stat(cfg.PrivateBasePath); os.IsNotExist(err) {
-		fmt.Printf("Warning: PrivateBasePath directory `%s` does not exist. Creating it.\n", cfg.PrivateBasePath)
-		err := os.MkdirAll(cfg.PrivateBasePath, 0755)
-		if err != nil {
-			return err
-		}
-	}
-
 	if cfg.PrivateBasePath[0] != '/' {
 		conf_dir, err := ConfDir()
 		if err != nil {
@@ -391,16 +383,16 @@ func (cfg *ServerCfg) handle_basepaths() error {
 		cfg.PrivateBasePath = filepath.Join(conf_dir, cfg.PrivateBasePath)
 	}
 
-	if cfg.PublicBasePath == "" {
-		fmt.Println("Warning: PublicBasePath is not set. Files will be stored in the root directory.")
-	}
-
-	if _, err := os.Stat(cfg.PublicBasePath); os.IsNotExist(err) {
-		fmt.Printf("Warning: PublicBasePath directory `%s` does not exist. Creating it.\n", cfg.PublicBasePath)
-		err := os.MkdirAll(cfg.PublicBasePath, 0755)
+	if _, err := os.Stat(cfg.PrivateBasePath); os.IsNotExist(err) {
+		fmt.Printf("Warning: PrivateBasePath directory `%s` does not exist. Creating it.\n", cfg.PrivateBasePath)
+		err := os.MkdirAll(cfg.PrivateBasePath, 0755)
 		if err != nil {
 			return err
 		}
+	}
+
+	if cfg.PublicBasePath == "" {
+		fmt.Println("Warning: PublicBasePath is not set. Files will be stored in the root directory.")
 	}
 
 	if cfg.PublicBasePath[0] != '/' {
@@ -409,6 +401,14 @@ func (cfg *ServerCfg) handle_basepaths() error {
 			return err
 		}
 		cfg.PublicBasePath = filepath.Join(conf_dir, cfg.PublicBasePath)
+	}
+
+	if _, err := os.Stat(cfg.PublicBasePath); os.IsNotExist(err) {
+		fmt.Printf("Warning: PublicBasePath directory `%s` does not exist. Creating it.\n", cfg.PublicBasePath)
+		err := os.MkdirAll(cfg.PublicBasePath, 0755)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

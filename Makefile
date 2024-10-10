@@ -21,8 +21,8 @@ prod:
 	@for platform in $(PLATFORMS); do \
 		for arch in $(ARCHITECTURES); do \
 			echo "Building for $$platform/$$arch..."; \
-			mkdir -p $$platform-$$arch; \
-			GOOS=$$platform GOARCH=$$arch $(GOBUILD) $(LDFLAGS) $(GCFLAGS) -o $$platform-$$arch/$(BINARY_NAME) .; \
+			mkdir -p prod; \
+			GOOS=$$platform GOARCH=$$arch $(GOBUILD) $(LDFLAGS) $(GCFLAGS) -o prod/$$platform-$$arch .; \
 		done; \
 	done
 

@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+
+platform=$(uname -ms)
+
+# Reset
+Color_Off=''
+
+# Regular Colors
+Red=''
+Green=''
+Dim='' # White
+
+# Bold
+Bold_White=''
+Bold_Green=''
+
+if [[ -t 1 ]]; then
+    # Reset
+    Color_Off='\033[0m' # Text Reset
+
+    # Regular Colors
+    Red='\033[0;31m'   # Red
+    Green='\033[0;32m' # Green
+    Dim='\033[0;2m'    # White
+
+    # Bold
+    Bold_Green='\033[1;32m' # Bold Green
+    Bold_White='\033[1m'    # Bold White
+fi
+
+error() {
+    echo -e "${Red}error${Color_Off}:" "$@" >&2
+    exit 1
+}
+
+warning() {
+    echo -e "${Red}warning${Color_Off}:" "$@" >&2
+}
+
+info() {
+    echo -e "${Dim}$@ ${Color_Off}"
+}
+
+info_bold() {
+    echo -e "${Bold_White}$@ ${Color_Off}"
+}
+
+success() {
+    echo -e "${Green}$@ ${Color_Off}"
+}
+
+warning "BSTORE IS STILL IN DEVELOPMENT. THE BINARIES ARE NOT ALWAYS UP TO DATE."
+warning "IT IS RECOMMENDED TO BUILD FROM SOURCE from https://github.com/cartersusi/bstore"
+
+info "Downloading bstore... for $platform"
+
+case $platform in
+'Darwin x86_64')
+    fname="darwin-amd64"
+    ;;
+'Darwin arm64')
+    fname="darwin-arm64"
+    ;;
+'Linux aarch64' | 'Linux arm64')
+    fname="linux-arm64"
+    ;;
+'Linux x86_64' | *)
+    fname="linux-amd64"
+    ;;
+'MINGW64'*)
+    fname="windows-amd64"
+    ;;
+esac
+
+info "Found $fname binary for $platform"
+
+LINK="https://github.com/cartersusi/bstore/releases/latest/download/$fname"
+info_bold "Downloading $fname from $LINK"
+
+home_dir=$HOME
+bin_dir="$home_dir/.bstore/bin"
+info "Installing bstore to $bin_dir"
+if [[ ! -d $bin_dir ]]; then
+    mkdir -p "$bin_dir" ||
+        error "Failed to create install directory \"$bin_dir\""
+fi
+
+exe_name="bstore"
+exe_path="$bin_dir/$exe_name"
+
+info "Downloading as bstore to $exe_path"
+
+curl -L -o "$exe_path" "$LINK" ||
+    error "Failed to download bstore"
+
+chmod +x "$exe_path" ||
+    error "Failed to make bstore executable"
+
+info "bstore installed to $exe_path"
+
+set_path() {
+    info "Setting path for bstore"
+
+    USER_SHELL=$(basename "$SHELL")
+    PATH_ENTRY="export PATH=$bin_dir:\$PATH"
+    
+    if [ "$USER_SHELL" = "bash" ]; then
+        CONFIG_FILE="$HOME/.bashrc"
+    elif [ "$USER_SHELL" = "zsh" ]; then
+        CONFIG_FILE="$HOME/.zshrc"
+    elif [ "$USER_SHELL" = "fish" ]; then
+        CONFIG_FILE="$HOME/.config/fish/config.fish"
+        PATH_ENTRY="set -gx PATH $bin_dir \$PATH"
+    else
+        error "Unknown shell: $USER_SHELL"
+        return 1
+    fi
+
+    if grep -q "$bin_dir" "$CONFIG_FILE"; then
+        info "Path already set in $CONFIG_FILE"
+    else
+        echo "$PATH_ENTRY" >> "$CONFIG_FILE"
+        info "Path added to $CONFIG_FILE"
+    fi
+}
+
+set_path
+info "You can run bstore with the following command:"
+info_bold "     bstore"
+
+info "Initialize bstore with the following command:"
+info_bold "     bstore -init"
