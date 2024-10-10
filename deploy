@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 platform=$(uname -ms)
+CONF_FILE="support/docker.conf.yml"
 
 # Reset
 Color_Off=''
@@ -69,32 +70,17 @@ then
 fi
 success "openssl found"
 
-if ! command -v go &> /dev/null
-then
-    error "go could not be found"
-fi
-success "go found"
-
-# Copy files
-info "Copying files..."
-cp -R docker/. ./
-
 # Check files
 info "Checking files..."
-if [ ! -f "conf.yml" ]; then
-    error "conf.yml not found"
+if [ ! -f "$CONF_FILE" ]; then
+    error "$CONF_FILE not found"
 fi
-success "conf.yml found"
+success "$CONF_FILE found"
 
 if [ ! -f "Dockerfile" ]; then
     error "Dockerfile not found"
 fi
 success "Dockerfile found"
-
-if [ ! -f ".dockerignore" ]; then
-    error ".dockerignore not found"
-fi
-success ".dockerignore found"
 
 # Generate keys
 info "Generating keys..."
@@ -108,7 +94,7 @@ success "BSTORE_ENC_KEY: $BSTORE_ENC_KEY"
 success "BSTORE_READ_WRITE_KEY: $BSTORE_READ_WRITE_KEY"
 
 # Get host port
-HOST_PORT=$(grep "^host:" "conf.yml" | cut -d':' -f3 | tr -d '[:space:]')
+HOST_PORT=$(grep "^host:" "$CONF_FILE" | cut -d':' -f3 | tr -d '[:space:]')
 
 if [ -z "$HOST_PORT" ]; then
     error "Error: Unable to find host port in config file"
@@ -125,3 +111,4 @@ docker run -p 8080:8080 \
   -e BSTORE_READ_WRITE_KEY=$(openssl rand -base64 32) \
   -e BSTORE_ENC_KEY=$(openssl rand -hex 16) \
   bstore-server
+  

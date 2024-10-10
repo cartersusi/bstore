@@ -1,8 +1,8 @@
 host: 0.0.0.0:8080
-keys: "env"
+keys: "env" # "env" or "<filename>"
 public_base_path: data/pub
 private_base_path: data/priv
-max_file_size: 100000000 # 95.37 MB
+max_file_size: 100000000 # bytes
 max_file_name_length: 256 
 log_file: bstore.log
 encrypt: true

@@ -30,7 +30,7 @@ COPY --from=builder /app/bstore .
 RUN mkdir -p /root/.bstore
 
 # Copy configuration file
-COPY conf.yml /root/.bstore/conf.yml
+COPY support/docker.conf.yml /root/.bstore/conf.yml
 
 # Expose the port the app runs on
 EXPOSE 8080
