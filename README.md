@@ -1,5 +1,5 @@
 <div align="center">
-  <img width="192px" height="auto" src="public/favicon.ico" alt="Bstore Logo">
+  <img width="192px" height="auto" src="support/favicon.ico" alt="Bstore Logo">
   <h1>Bstore</h1>
   <p>A simple blob storage.</p>
 </div>
