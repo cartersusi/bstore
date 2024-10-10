@@ -25,8 +25,19 @@
 
 ### **Secure**: 
   * AES 256-bit encryption
+
 ### **Efficient**: 
   * zstd compression
+
+### Lightweight:
+|OS|Size|
+|-|-|
+|linux-amd64|8.2Mb |
+|linux-arm64|7.9Mb |
+|windows-amd64|8.5Mb |
+|windows-arm64|7.9Mb |
+|darwin-amd64|8.4Mb |
+|darwin-arm64|8.1Mb |
 
 ## Use Cases
 * DIY Movies/TV Server

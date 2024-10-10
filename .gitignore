@@ -3,6 +3,7 @@ bstore
 conf.yml
 keys.env
 
+# Logs and Testing Files
 *.log
 *.gz
 *.png
@@ -14,7 +15,16 @@ keys.env
 *.csv
 *.sh
 
+# Testing Directories
 input/
 output/
 pub/
 priv/
+
+# Production Binaries
+linux-amd64/
+darwin-amd64/
+windows-amd64/
+linux-arm64/
+darwin-arm64/
+windows-arm64/
