@@ -1,4 +1,4 @@
-# [Go Docs](https://pkg.go.dev/github.com/cartersusi/bstore@latest/pkg)
+# [Go Docs](https://pkg.go.dev/github.com/cartersusi/bstore/pkg)
 
 ## View all Source files
 
