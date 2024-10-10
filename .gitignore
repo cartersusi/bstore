@@ -13,6 +13,7 @@ notes.md
 *.json
 *.csv
 *.sh
+*.keys
 
 # Testing Directories
 input/
