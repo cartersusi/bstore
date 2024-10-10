@@ -32,12 +32,12 @@
 ### Lightweight:
 |OS|Size|
 |-|-|
-|linux-amd64|8.2Mb |
-|linux-arm64|7.9Mb |
-|windows-amd64|8.5Mb |
-|windows-arm64|7.9Mb |
-|darwin-amd64|8.4Mb |
-|darwin-arm64|8.1Mb |
+|darwin-amd64|(8.44 MB)|
+|darwin-arm64|(8.09 MB)|
+|linux-arm64|(7.94 MB)|
+|linux-amd64|(8.25 MB)|
+|windows-amd64|(8.49 MB)|
+|windows-arm64|(7.96 MB)|
 
 ## Use Cases
 * DIY Movies/TV Server
