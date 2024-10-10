@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -107,15 +108,13 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 		return err
 	}
 
-	if cfg.Host == "" {
-		fmt.Println("Warning: Host is not set.")
+	err = cfg.handle_basepaths()
+	if err != nil {
+		return err
 	}
 
-	if cfg.PrivateBasePath == "" {
-		fmt.Println("Warning: PrivateBasePath is not set. Files will be stored in the root directory.")
-	}
-	if cfg.PublicBasePath == "" {
-		fmt.Println("Warning: PublicBasePath is not set. Files will be stored in the root directory.")
+	if cfg.Host == "" {
+		fmt.Println("Warning: Host is not set.")
 	}
 
 	if !cfg.Compress || !cfg.Encrypt {
@@ -193,8 +192,14 @@ middleware:
     max_requests: 100
     duration: 60 # seconds
 `
-	fmt.Println("Creating configuration file: conf.yml")
-	f, err := os.Create("conf.yml")
+	config_dir, err := ConfDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	conf_file := filepath.Join(config_dir, "conf.yml")
+	fmt.Printf("Creating configuration file: %s\n", conf_file)
+	f, err := os.Create(conf_file)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -218,8 +223,9 @@ middleware:
 	enc_key = strings.TrimSuffix(enc_key, "\n")
 	read_write_key = strings.TrimSuffix(read_write_key, "\n")
 
-	fmt.Println("Creating encryption and read/write keys file: keys.env")
-	f, err = os.Create("keys.env")
+	key_file := filepath.Join(config_dir, "keys.env")
+	fmt.Printf("Creating encryption and read/write keys file: %s\n", key_file)
+	f, err = os.Create(key_file)
 	defer f.Close()
 	if err != nil {
 		log.Fatal(err)
@@ -235,8 +241,6 @@ middleware:
 		log.Fatal(err)
 	}
 
-	fmt.Println("Configuration file created: conf.yml")
-	fmt.Println("Encryption key created: keys.env")
 	os.Exit(0)
 }
 
@@ -266,10 +270,6 @@ func (cfg *ServerCfg) Print() {
 	fmt.Printf("    Enabled: %t\n", cfg.MWare.RateLimit.Enabled)
 	fmt.Printf("    Max Requests: %d\n", cfg.MWare.RateLimit.MaxRequests)
 	fmt.Printf("    Duration: %ds\n", cfg.MWare.RateLimit.Duration)
-}
-
-func GetConfig(c *gin.Context) *ServerCfg {
-	return c.MustGet("config").(*ServerCfg)
 }
 
 func (bstore *ServerCfg) GetAccess(c *gin.Context) string {
@@ -302,6 +302,50 @@ func (bstore *ServerCfg) MakeUrl(c *gin.Context, fpath string) string {
 	return fmt.Sprintf("http://%s", url)
 }
 
+func ConfDir() (string, error) {
+	home_dir := os.Getenv("HOME")
+	if home_dir == "" {
+		currentUser, err := user.Current()
+		if err != nil {
+			fmt.Println("Error:", err)
+			return "", err
+		}
+
+		home_dir := currentUser.HomeDir
+		if home_dir == "" {
+			fmt.Println("Error: Could not determine home directory")
+			return "", err
+		}
+	}
+	config_path := filepath.Join(home_dir, ".bstore")
+	// make the directory if it doesn't exist
+	if _, err := os.Stat(config_path); os.IsNotExist(err) {
+		err := os.Mkdir(config_path, 0755)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return config_path, nil
+}
+
+func LogDir() (string, error) {
+	config_path, err := ConfDir()
+	if err != nil {
+		return "", err
+	}
+
+	log_path := filepath.Join(config_path, "logs")
+	if _, err := os.Stat(log_path); os.IsNotExist(err) {
+		err := os.Mkdir(log_path, 0755)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return log_path, nil
+}
+
 func (bstore *ServerCfg) get_base_path(x_access string) string {
 	if x_access == "public" {
 		return bstore.PublicBasePath
@@ -327,12 +371,60 @@ func (bstore *ServerCfg) GetRWKey() string {
 	return os.Getenv("BSTORE_READ_WRITE_KEY")
 }
 
+func (cfg *ServerCfg) handle_basepaths() error {
+	if cfg.PrivateBasePath == "" {
+		fmt.Println("Warning: PrivateBasePath is not set. Files will be stored in the root directory.")
+	}
+	if _, err := os.Stat(cfg.PrivateBasePath); os.IsNotExist(err) {
+		fmt.Printf("Warning: PrivateBasePath directory `%s` does not exist. Creating it.\n", cfg.PrivateBasePath)
+		err := os.MkdirAll(cfg.PrivateBasePath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	if cfg.PrivateBasePath[0] != '/' {
+		conf_dir, err := ConfDir()
+		if err != nil {
+			return err
+		}
+		cfg.PrivateBasePath = filepath.Join(conf_dir, cfg.PrivateBasePath)
+	}
+
+	if cfg.PublicBasePath == "" {
+		fmt.Println("Warning: PublicBasePath is not set. Files will be stored in the root directory.")
+	}
+
+	if _, err := os.Stat(cfg.PublicBasePath); os.IsNotExist(err) {
+		fmt.Printf("Warning: PublicBasePath directory `%s` does not exist. Creating it.\n", cfg.PublicBasePath)
+		err := os.MkdirAll(cfg.PublicBasePath, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	if cfg.PublicBasePath[0] != '/' {
+		conf_dir, err := ConfDir()
+		if err != nil {
+			return err
+		}
+		cfg.PublicBasePath = filepath.Join(conf_dir, cfg.PublicBasePath)
+	}
+
+	return nil
+}
+
 func (bstore *ServerCfg) check_keys() error {
 	if bstore.keys_in_file() {
 		fmt.Printf("Loading keys from file: %s\n", bstore.Keys)
 
-		// Pretty sure this is global, GetRWKey() works without reloading the file
-		err := godotenv.Load(bstore.Keys)
+		conf_dir, err := ConfDir()
+		if err != nil {
+			return err
+		}
+
+		bstore.Keys = filepath.Join(conf_dir, bstore.Keys)
+		err = godotenv.Load(bstore.Keys)
 		if err != nil {
 			log.Fatal("Error loading .env file")
 		}

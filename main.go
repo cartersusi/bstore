@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	bs "github.com/cartersusi/bstore/pkg"
 	"github.com/gin-gonic/gin"
@@ -13,6 +14,13 @@ import (
 func main() {
 	init_file := flag.Bool("init", false, "Create a new configuration file")
 	conf_file := flag.String("config", "conf.yml", "Configuration file")
+
+	config_dir, err := bs.ConfDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+	*conf_file = filepath.Join(config_dir, "conf.yml")
+
 	flag.Parse()
 	if *init_file {
 		bs.Init()
@@ -20,7 +28,7 @@ func main() {
 	}
 
 	bstore := &bs.ServerCfg{}
-	err := bstore.Load(*conf_file)
+	err = bstore.Load(*conf_file)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -31,7 +39,12 @@ func main() {
 	bstore.Cors(r)
 	bstore.Middleware(r)
 
-	f, err := os.OpenFile(bstore.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	log_dir, err := bs.LogDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log_fname := filepath.Join(log_dir, bstore.LogFile)
+	f, err := os.OpenFile(log_fname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}

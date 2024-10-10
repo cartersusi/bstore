@@ -63,19 +63,24 @@ make build
 ```
 
 - **Edit your config file (Optional)**
-```sh
-nvim conf.yml
-```
+  ```sh
+  nvim ~/.bstore/conf.yml
+  ```
+
+- **Print your keys (Optional)**
+  ```sh
+  cat ~/.bstore/keys.env
+  ```
 
 4. **Start Server**
 ```sh
 ./bstore
 ```
 
-- **Use a different config**
-```sh
-./bstore -config new_conf.yml
-```
+- **Use a different config (Optional)**
+  ```sh
+  ./bstore -config new_conf.yml
+  ```
 
 ## APIs
 - [bstorejs](https://github.com/cartersusi/bstorejs.git) - Express/Vanilla Js/Ts APIs
