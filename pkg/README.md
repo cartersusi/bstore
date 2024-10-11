@@ -4,14 +4,15 @@
 
 |pkg|file|
 |-|-|
-|bstore| [conf.go](./conf.go)|
-|bstore| [conf.go](./conf.go)|
-|bstore| [delete.go](./delete.go)|
-|bstore| [download.go](./download.go)|
-|bstore| [list.go](./list.go)|
-|bstore| [serve.go](./serve.go)|
-|bstore| [server.go](./server.go)|
-|bstore| [upload.go](./upload.go)|
+|bstore| [conf.go](./bstore/conf.go)|
+|bstore| [conf.go](./bstore/conf.go)|
+|bstore| [delete.go](./bstore/delete.go)|
+|bstore| [download.go](./bstore/download.go)|
+|bstore| [list.go](./bstore/list.go)|
+|bstore| [serve.go](./bstore/serve.go)|
+|bstore| [server.go](./bstore/server.go)|
+|bstore| [stream.go](./bstore/stream.go)|
+|bstore| [upload.go](./bstore/upload.go)|
 |fops| [enc.go](./fops/enc.go)|
 |fops| [fops.go](./fops/fops.go)|
 |fops| [zstd.go](./fops/zstd.go)|
