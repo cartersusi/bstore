@@ -42,7 +42,7 @@
 * PDF Books
 * Data Backups
 
-## Usage
+## Build (Recommended)
 
 1. **Clone Repository**
 ```sh
@@ -79,6 +79,11 @@ make build
   ```sh
   ./bstore -config new_conf.yml
   ```
+
+## Install
+```sh
+curl -fsSL https://cartersusi.com/bstore/install | bash
+```
 
 ## APIs
 - [bstorejs](https://github.com/cartersusi/bstorejs.git) - Express/Vanilla Js/Ts APIs

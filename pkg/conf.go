@@ -3,6 +3,7 @@ package bstore
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -242,6 +243,44 @@ middleware:
 	}
 
 	os.Exit(0)
+}
+
+func Update() {
+	resp, err := http.Get("https://cartersusi.com/bstore/install")
+	if err != nil {
+		fmt.Printf("Error downloading script: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	tmpfile, err := os.CreateTemp("", "install-*.sh")
+	if err != nil {
+		fmt.Printf("Error creating temporary file: %v\n", err)
+		return
+	}
+	defer os.Remove(tmpfile.Name())
+
+	_, err = io.Copy(tmpfile, resp.Body)
+	if err != nil {
+		fmt.Printf("Error writing to temporary file: %v\n", err)
+		return
+	}
+
+	if err := tmpfile.Close(); err != nil {
+		fmt.Printf("Error closing temporary file: %v\n", err)
+		return
+	}
+
+	cmd := exec.Command("bash", tmpfile.Name())
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Run()
+	if err != nil {
+		fmt.Printf("Error running script: %v\n", err)
+	}
 }
 
 func (cfg *ServerCfg) Print() {
