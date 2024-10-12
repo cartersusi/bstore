@@ -14,21 +14,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func gbytes(fpath string, to_encrypt bool) ([]byte, error) {
-	info, err := os.Stat(fpath)
-	if err == nil && !info.IsDir() {
-		return fops.ReadFile(fpath, to_encrypt)
-	}
-
-	fpath += ".zst"
-	info, err = os.Stat(fpath)
-	if err == nil && !info.IsDir() {
-		return fops.Decompress(fpath, to_encrypt)
-	}
-
-	return nil, errors.New("File not found")
-}
-
 func (bstore *ServerCfg) Stream() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		log.Println("Valid Get Request for", c.Request.URL.Path)
@@ -40,6 +25,10 @@ func (bstore *ServerCfg) Stream() gin.HandlerFunc {
 
 		fpath := filepath.Join(bstore.PublicBasePath, strings.TrimPrefix(path, "/"+bstore.PublicBasePath))
 		file_ext := fmt.Sprintf("video/%s", strings.TrimPrefix(filepath.Ext(fpath), "."))
+		if !contains(file_ext) {
+			HandleError(c, NewError(http.StatusNotFound, "File not found", errors.New("Invalid file type")))
+			return
+		}
 
 		data, err := gbytes(fpath, bstore.Encrypt)
 		if err != nil {
@@ -50,6 +39,7 @@ func (bstore *ServerCfg) Stream() gin.HandlerFunc {
 		streamHandler(c, data, file_ext)
 	}
 }
+
 func streamHandler(c *gin.Context, file_data []byte, file_ext string) {
 	fileSize := int64(len(file_data))
 	rangeHeader := c.GetHeader("Range")
@@ -112,4 +102,29 @@ func streamHandler(c *gin.Context, file_data []byte, file_ext string) {
 		log.Printf("Error while writing: %v", err)
 	}
 	log.Printf("Served full file: %d bytes", fileSize)
+}
+
+func contains(ext string) bool {
+	valid_exts := []string{"video/mp4", "video/webm", "video/ogg", "video/wmv", "video/mov", "video/avchd", "video/av1"}
+	for _, ve := range valid_exts {
+		if ve == ext {
+			return true
+		}
+	}
+	return false
+}
+
+func gbytes(fpath string, to_encrypt bool) ([]byte, error) {
+	info, err := os.Stat(fpath)
+	if err == nil && !info.IsDir() {
+		return fops.ReadFile(fpath, to_encrypt)
+	}
+
+	fpath += ".zst"
+	info, err = os.Stat(fpath)
+	if err == nil && !info.IsDir() {
+		return fops.Decompress(fpath, to_encrypt)
+	}
+
+	return nil, errors.New("File not found")
 }
