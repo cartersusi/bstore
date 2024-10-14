@@ -11,6 +11,8 @@ import (
 
 func main() {
 	update := flag.Bool("update", false, "Update the configuration file")
+	version := flag.Bool("version", false, "Print version")
+
 	init_file := flag.Bool("init", false, "Create a new configuration file")
 	conf_file := flag.String("config", "conf.yml", "Configuration file")
 	flag.Parse()
@@ -24,6 +26,11 @@ func main() {
 
 	if *update {
 		bs.Update()
+		return
+	}
+
+	if *version {
+		bs.Version()
 		return
 	}
 

@@ -25,7 +25,6 @@ func Make(input_path string, codec string, compress bool, encrypt bool, compress
 	}
 	hls.VideoBuilder(HLS)
 
-	// ffmpefg alread multithreaded, no need for goroutines
 	cmd.RunCMD_fs(dash.Command)
 	cmd.RunCMD_fs(hls.Command)
 

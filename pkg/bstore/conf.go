@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -254,6 +255,27 @@ middleware:
 	os.Exit(0)
 }
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
+func Version() {
+	info, ok := debug.ReadBuildInfo()
+	if ok {
+		for _, setting := range info.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				commit = setting.Value
+			case "vcs.time":
+				date = setting.Value
+			}
+		}
+	}
+	fmt.Printf("bstore %s, commit %s, built at %s\n", version, commit, date)
+}
+
 func Update() {
 	resp, err := http.Get("https://cartersusi.com/bstore/install")
 	if err != nil {
@@ -474,6 +496,7 @@ func (bstore *ServerCfg) check_keys() error {
 			return err
 		}
 
+		// pretty sure this is global, GetRWKey() is commented out until certain
 		bstore.Keys = filepath.Join(conf_dir, bstore.Keys)
 		err = godotenv.Load(bstore.Keys)
 		if err != nil {
