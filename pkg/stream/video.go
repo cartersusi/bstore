@@ -10,6 +10,7 @@ import (
 
 	"github.com/cartersusi/bstore/pkg/cmd"
 	"github.com/cartersusi/bstore/pkg/fops"
+	"github.com/gin-gonic/gin"
 )
 
 const (
@@ -31,6 +32,20 @@ type VideoEncoder struct {
 	Codec      string
 	Audio      bool
 	Command    string
+}
+
+func MakeUrl(c *gin.Context, fpath string, method int) string {
+	tls := "https://"
+	is_https := c.Request.TLS
+	if is_https == nil {
+		tls = "http://"
+	}
+
+	_, fname := filepath.Split(fpath)
+	dir_name := strings.TrimSuffix(fname, filepath.Ext(fname))
+	stream_fname := MethodFMap[method]
+
+	return fmt.Sprintf("%s%s/bstore/%s/%s", tls, c.Request.Host, dir_name, stream_fname)
 }
 
 func (v *VideoEncoder) VideoBuilder(method int) error {

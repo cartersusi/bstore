@@ -12,9 +12,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type StreamResponse struct {
+	Hls  string `json:"hls_url"`
+	Dash string `json:"dash_url"`
+}
 type UploadRespone struct {
-	Url     string `json:"url"`
-	Message string `json:"message"`
+	Url     string         `json:"url"`
+	Message string         `json:"message"`
+	Stream  StreamResponse `json:"stream"`
 }
 
 func (bstore *ServerCfg) Upload(c *gin.Context) {
@@ -51,6 +56,9 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 	}
 
 	is_video := false
+	stream_response := &StreamResponse{}
+	stream_response.Hls = "UNAVAILABLE"
+	stream_response.Dash = "UNAVAILABLE"
 	v_fpath := strings.TrimSuffix(fpath, ".zst")
 	if bstore.Streaming.Enabled {
 		is_video = stream.CheckEXT(v_fpath)
@@ -70,6 +78,11 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 				return
 			}
 			_ = os.Remove(v_fpath)
+
+			stream_response.Hls = stream.MakeUrl(c, v_fpath, stream.HLS)
+			stream_response.Dash = stream.MakeUrl(c, v_fpath, stream.DASH)
+			log.Println("HLS Stream created at", stream_response.Hls)
+			log.Println("DASH Stream created at", stream_response.Dash)
 		}
 		err = fops.Compress(&buf, file, bstore.CompressionLevel, bstore.Encrypt)
 		if err != nil {
@@ -84,7 +97,9 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 		}
 	}
 
-	upload_response := &UploadRespone{}
+	upload_response := &UploadRespone{
+		Stream: *stream_response,
+	}
 	upload_response.Url = "UNAUTHORIZED"
 	if bstore.GetAccess(c) != "private" {
 		upload_response.Url = bstore.MakeUrl(c, validation.Fpath)
