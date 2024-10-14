@@ -8,6 +8,9 @@ log_file: bstore.log
 encrypt: true
 compress: true
 compression_lvl: 2 # 1-4
+streaming: 
+  enable: true
+  codec: "libx264" # See support/README.md for all options
 cors:
   allow_origins: 
     - "*"

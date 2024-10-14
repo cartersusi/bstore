@@ -40,7 +40,6 @@ func Start(conf_file string) {
 	log.SetOutput(multiWriter)
 
 	r.Use(bstore.Serve())
-	r.Use(bstore.Stream())
 	r.PUT("/api/upload/*file_path", bstore.Upload)
 	r.GET("/api/download/*file_path", bstore.Get)
 	r.DELETE("/api/delete/*file_path", bstore.Delete)

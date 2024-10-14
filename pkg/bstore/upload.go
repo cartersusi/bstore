@@ -5,8 +5,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/cartersusi/bstore/pkg/fops"
+	"github.com/cartersusi/bstore/pkg/stream"
 	"github.com/gin-gonic/gin"
 )
 
@@ -23,7 +25,7 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 		return
 	}
 
-	fpath, err := fops.MkDir(validation.Fpath, validation.BasePath, bstore.Compress)
+	fpath, err := fops.MkDirExt(validation.Fpath, validation.BasePath, bstore.Compress)
 	if err != nil {
 		HandleError(c, NewError(http.StatusBadRequest, "Error creating directory", err))
 		return
@@ -48,7 +50,27 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 		return
 	}
 
+	is_video := false
+	v_fpath := strings.TrimSuffix(fpath, ".zst")
+	if bstore.Streaming.Enabled {
+		is_video = stream.CheckEXT(v_fpath)
+	}
+
 	if bstore.Compress {
+		if is_video {
+			log.Println("Video file detected, creating video stream at", v_fpath)
+			err = fops.WriteNewFile(v_fpath, buf.Bytes(), false)
+			if err != nil {
+				HandleError(c, NewError(http.StatusInternalServerError, "Error writing data", err))
+				return
+			}
+			err = stream.Make(v_fpath, bstore.Streaming.Codec, bstore.Compress, bstore.Encrypt, bstore.CompressionLevel)
+			if err != nil {
+				HandleError(c, NewError(http.StatusInternalServerError, "Error making video stream", err))
+				return
+			}
+			_ = os.Remove(v_fpath)
+		}
 		err = fops.Compress(&buf, file, bstore.CompressionLevel, bstore.Encrypt)
 		if err != nil {
 			HandleError(c, NewError(http.StatusInternalServerError, "Error writing compressed data", err))

@@ -13,6 +13,9 @@
 |bstore| [server.go](./bstore/server.go)|
 |bstore| [stream.go](./bstore/stream.go)|
 |bstore| [upload.go](./bstore/upload.go)|
+|cmd| [cmd.go](./cmd/cmd.go)|
 |fops| [enc.go](./fops/enc.go)|
 |fops| [fops.go](./fops/fops.go)|
 |fops| [zstd.go](./fops/zstd.go)|
+|stream| [stream.go](./stream/stream.go)|
+|stream| [video.go](./stream/video.go)|

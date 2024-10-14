@@ -35,7 +35,17 @@ func WriteFile(file *os.File, data []byte, encrypt bool) error {
 	return err
 }
 
-func MkDir(fpath, base_path string, compress bool) (string, error) {
+func WriteNewFile(fpath string, data []byte, encrypt bool) error {
+	file, err := os.Create(fpath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return WriteFile(file, data, encrypt)
+}
+
+func MkDirExt(fpath, base_path string, compress bool) (string, error) {
 	if fpath == "" {
 		return "", errors.New("file path is required")
 	}
@@ -54,4 +64,45 @@ func MkDir(fpath, base_path string, compress bool) (string, error) {
 	}
 
 	return fpath, nil
+}
+
+func MkDir(fpath string) error {
+	if fpath == "" {
+		return errors.New("file path is required")
+	}
+
+	if err := os.MkdirAll(fpath, os.ModePerm); err != nil {
+		return errors.New("error creating directory")
+	}
+
+	return nil
+}
+
+func ListDir(fpath string) ([]string, error) {
+	var files []string
+	dir, err := os.ReadDir(fpath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, file := range dir {
+		files = append(files, file.Name())
+	}
+
+	return files, nil
+}
+
+func Contains(source, target string) bool {
+	length := len(target)
+	if length > len(source) {
+		return false
+	}
+
+	for i := 0; i <= len(source)-length; i++ {
+		if source[i:i+length] == target {
+			return true
+		}
+	}
+
+	return false
 }

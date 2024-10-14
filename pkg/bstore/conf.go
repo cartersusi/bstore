@@ -39,6 +39,11 @@ type MiddlewareConfig struct {
 	RateLimit         RateLimitConfig `yaml:"rate_limit"`
 }
 
+type StreamingConfig struct {
+	Enabled bool   `yaml:"enable"`
+	Codec   string `yaml:"codec"`
+}
+
 type ServerCfg struct {
 	Host             string           `yaml:"host"`
 	Keys             string           `yaml:"keys"`
@@ -49,6 +54,7 @@ type ServerCfg struct {
 	Encrypt          bool             `yaml:"encrypt"`
 	Compress         bool             `yaml:"compress"`
 	CompressionLevel int              `yaml:"compression_lvl"`
+	Streaming        StreamingConfig  `yaml:"streaming"`
 	CORS             CORSConfig       `yaml:"cors"`
 	MWare            MiddlewareConfig `yaml:"middleware"`
 }
@@ -167,6 +173,9 @@ log_file: bstore.log
 encrypt: true
 compress: true
 compression_lvl: 2 # 1-4
+streaming: 
+  enable: true
+  codec: "libx264" # See support/README.md for all options
 cors:
   allow_origins: 
     - "*"
@@ -294,6 +303,9 @@ func (cfg *ServerCfg) Print() {
 	fmt.Printf("Encrypt: %t\n", cfg.Encrypt)
 	fmt.Printf("Compress: %t\n", cfg.Compress)
 	fmt.Printf("CompressionLevel: %d\n", cfg.CompressionLevel)
+	fmt.Printf("Streaming:\n")
+	fmt.Printf("  Enabled: %t\n", cfg.Streaming.Enabled)
+	fmt.Printf("  Codec: %s\n", cfg.Streaming.Codec)
 	fmt.Printf("CORS:\n")
 	fmt.Printf("  Allow Origins: %v\n", cfg.CORS.AllowOrigins)
 	fmt.Printf("  Allow Methods: %v\n", cfg.CORS.AllowMethods)
