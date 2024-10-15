@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -253,28 +252,6 @@ middleware:
 	}
 
 	os.Exit(0)
-}
-
-var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
-)
-
-func Version() {
-	info, ok := debug.ReadBuildInfo()
-	if ok {
-		version = info.Main.Version
-		for _, setting := range info.Settings {
-			switch setting.Key {
-			case "vcs.revision":
-				commit = setting.Value
-			case "vcs.time":
-				date = setting.Value
-			}
-		}
-	}
-	fmt.Printf("bstore %s, commit %s, built at %s\n", version, commit, date)
 }
 
 func Update() {

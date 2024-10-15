@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"path/filepath"
 
@@ -9,8 +10,14 @@ import (
 	bs "github.com/cartersusi/bstore/pkg/bstore"
 )
 
+var (
+	version string
+	commit  string
+	date    string
+)
+
 func main() {
-	update := flag.Bool("update", false, "Update the configuration file")
+	update := flag.Bool("update", false, "Update the binary")
 	version := flag.Bool("version", false, "Print version")
 
 	init_file := flag.Bool("init", false, "Create a new configuration file")
@@ -30,7 +37,7 @@ func main() {
 	}
 
 	if *version {
-		bs.Version()
+		Version()
 		return
 	}
 
@@ -40,4 +47,8 @@ func main() {
 	}
 
 	server.Start(*conf_file)
+}
+
+func Version() {
+	fmt.Printf("bstore %s, commit %s, built at %s\n", version, commit, date)
 }
