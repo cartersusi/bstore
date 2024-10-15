@@ -30,7 +30,7 @@ jobs:
         GOOS: ${{ matrix.platform }}
         GOARCH: ${{ matrix.arch }}
       run: |
-        VERSION=$(git describe --tags --always --dirty)
+        VERSION=v0.2.${{ github.run_number }}
         COMMIT=$(git rev-parse HEAD)
         DATE=$(date -u +'%Y-%m-%d_%H:%M:%S')
         go build -v -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}" -o bstore-${{ matrix.platform }}-${{ matrix.arch }} .

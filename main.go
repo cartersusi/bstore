@@ -50,5 +50,7 @@ func main() {
 }
 
 func Version() {
-	fmt.Printf("bstore %s, commit %s, built at %s\n", version, commit, date)
+	fmt.Printf("bstore %s\n", version)
+	fmt.Printf("\tcommit: %s\n", commit)
+	fmt.Printf("\tdate: %s\n", date)
 }
