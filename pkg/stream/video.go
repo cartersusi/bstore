@@ -16,11 +16,13 @@ import (
 const (
 	DASH = iota
 	HLS
+	POSTER
 )
 
 var MethodFMap = map[int]string{
-	DASH: "index.mpd",
-	HLS:  "index.m3u8",
+	DASH:   "index.mpd",
+	HLS:    "index.m3u8",
+	POSTER: "index.jpg",
 }
 var VidEXT = []string{".mp4", ".webm", ".ogg", ".wmv", ".mov", ".avchd", ".av1"}
 

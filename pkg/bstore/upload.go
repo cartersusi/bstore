@@ -13,8 +13,9 @@ import (
 )
 
 type StreamResponse struct {
-	Hls  string `json:"hls_url"`
-	Dash string `json:"dash_url"`
+	Hls    string `json:"hls_url"`
+	Dash   string `json:"dash_url"`
+	Poster string `json:"poster_url"`
 }
 type UploadRespone struct {
 	Url     string         `json:"url"`
@@ -59,6 +60,7 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 	stream_response := &StreamResponse{}
 	stream_response.Hls = "UNAVAILABLE"
 	stream_response.Dash = "UNAVAILABLE"
+	stream_response.Poster = "UNAVAILABLE"
 	v_fpath := strings.TrimSuffix(fpath, ".zst")
 	if bstore.Streaming.Enabled {
 		is_video = stream.CheckEXT(v_fpath)
@@ -81,8 +83,10 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 
 			stream_response.Hls = stream.MakeUrl(c, v_fpath, stream.HLS)
 			stream_response.Dash = stream.MakeUrl(c, v_fpath, stream.DASH)
+			stream_response.Poster = stream.MakeUrl(c, v_fpath, stream.POSTER)
 			log.Println("HLS Stream created at", stream_response.Hls)
 			log.Println("DASH Stream created at", stream_response.Dash)
+			log.Println("Poster created at", stream_response.Poster)
 		}
 		err = fops.Compress(&buf, file, bstore.CompressionLevel, bstore.Encrypt)
 		if err != nil {

@@ -2,18 +2,11 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"path/filepath"
 
 	server "github.com/cartersusi/bstore/pkg"
 	bs "github.com/cartersusi/bstore/pkg/bstore"
-)
-
-var (
-	version string
-	commit  string
-	date    string
 )
 
 func main() {
@@ -32,7 +25,7 @@ func main() {
 	*conf_file = filepath.Join(config_dir, "conf.yml")
 
 	if *update {
-		bs.Update()
+		Update()
 		return
 	}
 
@@ -42,15 +35,13 @@ func main() {
 	}
 
 	if *init_file {
-		bs.Init()
+		Init()
+		return
+	}
+
+	if DidUpdate() {
 		return
 	}
 
 	server.Start(*conf_file)
-}
-
-func Version() {
-	fmt.Printf("bstore %s\n", version)
-	fmt.Printf("\tcommit: %s\n", commit)
-	fmt.Printf("\tdate: %s\n", date)
 }

@@ -19,22 +19,37 @@ func Make(input_path string, codec string, compress bool, encrypt bool, compress
 	}
 	dash.VideoBuilder(DASH)
 
+	// Doesn't matter if it fails, it's just a thumbnail
+	thumbnail_cmd := fmt.Sprintf("ffmpeg -i %s -vf \"select=eq(n\\,0)\" -frames:v 1 -update 1 %s", input_path, filepath.Join(dash.OutputDir, "index.jpg"))
+	_ = cmd.RunCMD_fs(thumbnail_cmd)
+
 	hls := &VideoEncoder{
 		InputFile: input_path,
 		Codec:     codec,
 	}
 	hls.VideoBuilder(HLS)
 
-	cmd.RunCMD_fs(dash.Command)
-	cmd.RunCMD_fs(hls.Command)
+	dash_err := cmd.RunCMD_fs(dash.Command)
+	hls_err := cmd.RunCMD_fs(hls.Command)
+
+	// If there is an error, still run the cleanup
+	carry_over_errormsg := ""
+	if dash_err != nil {
+		carry_over_errormsg += fmt.Sprintf("DASH: %s\n", dash_err)
+		log.Println("Error with DASH")
+	}
+	if hls_err != nil {
+		carry_over_errormsg += fmt.Sprintf("HLS: %s\n", hls_err)
+		log.Println("Error with HLS")
+	}
 
 	if dash.OutputDir == hls.OutputDir {
 		err := CleanUp(compress, encrypt, compress_lvl, dash.OutputDir)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Video file is stream compatible but not able to compress/encrypt. %s", err))
+			return errors.New(fmt.Sprintf("%sVideo file is stream compatible but not able to compress/encrypt. %s", carry_over_errormsg, err))
 		}
 	} else {
-		return errors.New("Video file is stream compatible but not able to compress/encrypt. Output directories do not match")
+		return errors.New(fmt.Sprintf("%sVideo file is stream compatible but not able to compress/encrypt. Output directories do not match", carry_over_errormsg))
 	}
 	return nil
 }

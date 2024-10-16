@@ -3,11 +3,9 @@ package bstore
 import (
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -160,136 +158,6 @@ func (cfg *ServerCfg) Load(conf_file string) error {
 	}
 
 	return nil
-}
-
-func Init() {
-	init_yaml := `host: localhost:8080
-keys: "keys.env" # "env" or "<filename>"
-public_base_path: pub/bstore
-private_base_path: priv/bstore
-max_file_size: 100000000 # bytes
-max_file_name_length: 256 
-log_file: bstore.log
-encrypt: true
-compress: true
-compression_lvl: 2 # 1-4
-streaming: 
-  enable: true
-  codec: "libx264" # See support/README.md for all options
-cors:
-  allow_origins: 
-    - "*"
-  allow_methods: 
-    - "GET"
-    - "PUT"
-    - "DELETE"
-    - "OPTIONS"
-  allow_headers: 
-    - "Content-Type"
-    - "Authorization"
-    - "X-Access"
-  expose_headers: 
-    - "Content-Type"
-    - "Authorization"
-  allow_credentials: true
-  max_age: 3600           #seconds
-middleware:
-  max_path_length: 256
-  only_bstore_paths: true
-  rate_limit_capacity: 100000 # Max Number of Keys(IP Addr) in Memory
-  rate_limit:
-    enabled: true
-    max_requests: 100
-    duration: 60 # seconds
-`
-	config_dir, err := ConfDir()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	conf_file := filepath.Join(config_dir, "conf.yml")
-	fmt.Printf("Creating configuration file: %s\n", conf_file)
-	f, err := os.Create(conf_file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	_, err = f.WriteString(init_yaml)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	enc_key, err := get_cmd("openssl", "rand", "-hex", "16")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	read_write_key, err := get_cmd("openssl", "rand", "-base64", "32")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	enc_key = strings.TrimSuffix(enc_key, "\n")
-	read_write_key = strings.TrimSuffix(read_write_key, "\n")
-
-	key_file := filepath.Join(config_dir, "keys.env")
-	fmt.Printf("Creating encryption and read/write keys file: %s\n", key_file)
-	f, err = os.Create(key_file)
-	defer f.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = f.WriteString(fmt.Sprintf("BSTORE_ENC_KEY=\"%s\"\n", enc_key))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	_, err = f.WriteString(fmt.Sprintf("BSTORE_READ_WRITE_KEY=\"%s\"", read_write_key))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	os.Exit(0)
-}
-
-func Update() {
-	resp, err := http.Get("https://cartersusi.com/bstore/install")
-	if err != nil {
-		fmt.Printf("Error downloading script: %v\n", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	tmpfile, err := os.CreateTemp("", "install-*.sh")
-	if err != nil {
-		fmt.Printf("Error creating temporary file: %v\n", err)
-		return
-	}
-	defer os.Remove(tmpfile.Name())
-
-	_, err = io.Copy(tmpfile, resp.Body)
-	if err != nil {
-		fmt.Printf("Error writing to temporary file: %v\n", err)
-		return
-	}
-
-	if err := tmpfile.Close(); err != nil {
-		fmt.Printf("Error closing temporary file: %v\n", err)
-		return
-	}
-
-	cmd := exec.Command("bash", tmpfile.Name())
-
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	err = cmd.Run()
-	if err != nil {
-		fmt.Printf("Error running script: %v\n", err)
-	}
 }
 
 func (cfg *ServerCfg) Print() {
@@ -489,18 +357,4 @@ func (bstore *ServerCfg) check_keys() error {
 		return errors.New("BSTORE_ENC_KEY environment variable is not set")
 	}
 	return nil
-}
-
-func get_cmd(name string, arg ...string) (string, error) {
-	cmd := exec.Command(name, arg...)
-	if errors.Is(cmd.Err, exec.ErrDot) {
-		cmd.Err = nil
-	}
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", err
-	}
-
-	return string(output), nil
 }
