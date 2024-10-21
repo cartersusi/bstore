@@ -2,14 +2,28 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	server "github.com/cartersusi/bstore/pkg"
 	bs "github.com/cartersusi/bstore/pkg/bstore"
 )
 
 func main() {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sigChan
+		fmt.Println("\nReceived interrupt signal. Cleaning up...")
+		cleanup()
+		os.Exit(0)
+	}()
+
 	update := flag.Bool("update", false, "Update the binary")
 	version := flag.Bool("version", false, "Print version")
 
@@ -44,4 +58,9 @@ func main() {
 	}
 
 	server.Start(*conf_file)
+}
+
+func cleanup() {
+	lockFile := filepath.Join(os.TempDir(), "bstore-update.lock")
+	os.Remove(lockFile)
 }

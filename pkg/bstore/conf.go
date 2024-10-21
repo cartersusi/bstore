@@ -175,7 +175,7 @@ func (cfg *ServerCfg) Print() {
 	fmt.Printf("Streaming:\n")
 	fmt.Printf("  Enabled: %t\n", cfg.Streaming.Enabled)
 	fmt.Printf("  Codec: %s\n", cfg.Streaming.Codec)
-	fmt.Printf("  Bitrate: %sk\n", cfg.Streaming.Bitrate)
+	fmt.Printf("  Bitrate: %dk\n", cfg.Streaming.Bitrate)
 	fmt.Printf("CORS:\n")
 	fmt.Printf("  Allow Origins: %v\n", cfg.CORS.AllowOrigins)
 	fmt.Printf("  Allow Methods: %v\n", cfg.CORS.AllowMethods)

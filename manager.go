@@ -115,6 +115,18 @@ middleware:
 }
 
 func Update() {
+	lockFile := filepath.Join(os.TempDir(), "bstore-update.lock")
+	if _, err := os.Stat(lockFile); err == nil {
+		fmt.Println("Update already in progress. If this is incorrect, delete:", lockFile)
+		return
+	}
+
+	if err := os.WriteFile(lockFile, []byte(time.Now().String()), 0644); err != nil {
+		fmt.Printf("Error creating lock file: %v\n", err)
+		return
+	}
+	defer os.Remove(lockFile)
+
 	resp, err := http.Get("https://cartersusi.com/bstore/install")
 	if err != nil {
 		fmt.Printf("Error downloading script: %v\n", err)
