@@ -34,7 +34,8 @@ compress: true
 compression_lvl: 2 # 1-4
 streaming: 
   enable: true
-  codec: "libx264" # See support/README.md for all options
+  codec: "auto" # See support/README.md for all options
+  bitrate: 1000 # {bitrate}k
 cors:
   allow_origins: 
     - "*"

@@ -57,10 +57,7 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 	}
 
 	is_video := false
-	stream_response := &StreamResponse{}
-	stream_response.Hls = "UNAVAILABLE"
-	stream_response.Dash = "UNAVAILABLE"
-	stream_response.Poster = "UNAVAILABLE"
+	stream_response := make_stream_response()
 	v_fpath := strings.TrimSuffix(fpath, ".zst")
 	if bstore.Streaming.Enabled {
 		is_video = stream.CheckEXT(v_fpath)
@@ -74,7 +71,15 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 				HandleError(c, NewError(http.StatusInternalServerError, "Error writing data", err))
 				return
 			}
-			err = stream.Make(v_fpath, bstore.Streaming.Codec, bstore.Compress, bstore.Encrypt, bstore.CompressionLevel)
+
+			err = stream.Make(stream.VideoEncoderRequest{
+				InputPath:   v_fpath,
+				Codec:       bstore.Streaming.Codec,
+				Bitrate:     bstore.Streaming.Bitrate,
+				Compress:    bstore.Compress,
+				Encrypt:     bstore.Encrypt,
+				CompressLvl: bstore.CompressionLevel,
+			})
 			if err != nil {
 				HandleError(c, NewError(http.StatusInternalServerError, "Error making video stream", err))
 				return
@@ -84,9 +89,6 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 			stream_response.Hls = stream.MakeUrl(c, v_fpath, stream.HLS)
 			stream_response.Dash = stream.MakeUrl(c, v_fpath, stream.DASH)
 			stream_response.Poster = stream.MakeUrl(c, v_fpath, stream.POSTER)
-			log.Println("HLS Stream created at", stream_response.Hls)
-			log.Println("DASH Stream created at", stream_response.Dash)
-			log.Println("Poster created at", stream_response.Poster)
 		}
 		err = fops.Compress(&buf, file, bstore.CompressionLevel, bstore.Encrypt)
 		if err != nil {
@@ -116,4 +118,12 @@ func (bstore *ServerCfg) Upload(c *gin.Context) {
 
 	file.Sync()
 	c.JSON(http.StatusOK, upload_response)
+}
+
+func make_stream_response() *StreamResponse {
+	return &StreamResponse{
+		Hls:    "UNAVAILABLE",
+		Dash:   "UNAVAILABLE",
+		Poster: "UNAVAILABLE",
+	}
 }
