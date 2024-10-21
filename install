@@ -79,7 +79,14 @@ info_bold "Downloading $fname from $LINK"
 
 home_dir=$HOME
 bin_dir="$home_dir/.bstore/bin"
-info "Installing bstore to $bin_dir"
+temp_dir="$home_dir/.bstore/temp"
+info "Installing bstore to $temp_dir"
+
+if [[ ! -d $temp_dir ]]; then
+    mkdir -p "$temp_dir" ||
+        error "Failed to create temp directory \"$temp_dir\""
+fi
+
 if [[ ! -d $bin_dir ]]; then
     mkdir -p "$bin_dir" ||
         error "Failed to create install directory \"$bin_dir\""
@@ -87,14 +94,23 @@ fi
 
 exe_name="bstore"
 exe_path="$bin_dir/$exe_name"
+temp_exe_path="$temp_dir/$exe_name.new"
 
-info "Downloading as bstore to $exe_path"
-
-curl -L -o "$exe_path" "$LINK" ||
+info "Downloading new version to temporary location: $temp_exe_path"
+curl -L -o "$temp_exe_path" "$LINK" ||
     error "Failed to download bstore"
 
-chmod +x "$exe_path" ||
-    error "Failed to make bstore executable"
+chmod +x "$temp_exe_path" ||
+    error "Failed to make new bstore executable"
+
+# Move the new version into place
+info "Moving new version to $exe_path"
+mv "$temp_exe_path" "$exe_path" ||
+    error "Failed to install new version"
+
+# Clean up temp directory
+rm -rf "$temp_dir" ||
+    warning "Failed to clean up temp directory"
 
 info "bstore installed to $exe_path"
 
