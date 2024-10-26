@@ -5,6 +5,7 @@ go 1.23.1
 require (
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.10.0
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/joho/godotenv v1.5.1
 	github.com/klauspost/compress v1.17.10
 	gopkg.in/yaml.v2 v2.4.0

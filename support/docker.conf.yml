@@ -8,6 +8,10 @@ log_file: bstore.log
 encrypt: true
 compress: true
 compression_lvl: 2 # 1-4
+cache:
+  enable: true
+  n_items: 1000
+  ttl: 3600 # seconds
 streaming: 
   enable: true
   codec: "auto" # See stream/README.md for all options

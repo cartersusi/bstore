@@ -36,6 +36,10 @@ streaming:
   enable: true
   codec: "auto" # See support/README.md for all options
   bitrate: 1000 # {bitrate}k
+cache:
+  enable: true
+  n_items: 1000
+  ttl: 3600 # seconds
 cors:
   allow_origins: 
     - "*"

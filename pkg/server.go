@@ -5,9 +5,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	bs "github.com/cartersusi/bstore/pkg/bstore"
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 )
 
 func Start(conf_file string) {
@@ -38,6 +40,15 @@ func Start(conf_file string) {
 	gin.DefaultWriter = multiWriter
 	r.Use(gin.Logger())
 	log.SetOutput(multiWriter)
+
+	var cache *expirable.LRU[string, []byte]
+	if bstore.Cache.Enabled {
+		cache = expirable.NewLRU[string, []byte](bstore.Cache.N, nil, time.Second*time.Duration(bstore.Cache.TTL))
+	} else {
+		cache = nil
+	}
+
+	r.Use(bs.CacheMiddleware(cache))
 
 	r.Use(bstore.Serve())
 	r.PUT("/api/upload/*file_path", bstore.Upload)

@@ -9,7 +9,10 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/golang-lru/v2/expirable"
 )
+
+const cacheKey = "cache"
 
 type IPRateLimiter struct {
 	ips        map[string]*list.Element
@@ -21,6 +24,22 @@ type IPRateLimiter struct {
 type timestampEntry struct {
 	ip    string
 	stamp int64
+}
+
+func CacheMiddleware(cache *expirable.LRU[string, []byte]) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(cacheKey, cache)
+		c.Next()
+	}
+}
+
+func GetCache(c *gin.Context) *expirable.LRU[string, []byte] {
+	if cache, exists := c.Get(cacheKey); exists {
+		if typedCache, ok := cache.(*expirable.LRU[string, []byte]); ok {
+			return typedCache
+		}
+	}
+	return nil
 }
 
 func NewIPRateLimiter(capacity int) *IPRateLimiter {

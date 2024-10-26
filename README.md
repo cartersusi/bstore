@@ -42,6 +42,11 @@
 * PDF Books
 * Data Backups
 
+## Features 
+* HLS and MPEG DASH video Streaming
+* Data Cache
+* Rate Limiting
+
 ## Build (Recommended)
 
 1. **Clone Repository**

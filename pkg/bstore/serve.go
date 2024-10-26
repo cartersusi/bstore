@@ -32,6 +32,14 @@ func (bstore *ServerCfg) Serve() gin.HandlerFunc {
 			}
 		}
 
+		cached_content, ok := check_OR_get(c, fpath)
+		if ok {
+			contentType := http.DetectContentType(cached_content)
+			c.Header("Content-Type", contentType)
+			c.Data(http.StatusOK, contentType, cached_content)
+			return
+		}
+
 		if isCompressed {
 			fpath = fpath + ".zst"
 		}
@@ -42,9 +50,10 @@ func (bstore *ServerCfg) Serve() gin.HandlerFunc {
 				HandleError(c, NewError(http.StatusInternalServerError, "Error decompressing file", err))
 				return
 			}
+			set_cache(c, strings.TrimSuffix(fpath, ".zst"), content)
+
 			contentType := http.DetectContentType(content)
 			c.Header("Content-Type", contentType)
-			log.Println("Serving file at", fpath)
 			c.Data(http.StatusOK, contentType, content)
 		} else {
 			file, err := os.Open(fpath)
@@ -53,8 +62,27 @@ func (bstore *ServerCfg) Serve() gin.HandlerFunc {
 				return
 			}
 			defer file.Close()
-			log.Println("Serving file at", fpath)
 			http.ServeContent(c.Writer, c.Request, info.Name(), info.ModTime(), file)
 		}
+	}
+}
+
+func check_OR_get(c *gin.Context, key string) ([]byte, bool) {
+	cache := GetCache(c)
+	if cache != nil {
+		if val, ok := cache.Get(key); ok {
+			log.Println("Cache hit for", key)
+			return val, true
+		}
+	}
+
+	return nil, false
+}
+
+func set_cache(c *gin.Context, key string, val []byte) {
+	cache := GetCache(c)
+	if cache != nil {
+		log.Println("Caching", key)
+		cache.Add(key, val)
 	}
 }

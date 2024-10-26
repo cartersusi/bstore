@@ -43,6 +43,12 @@ type StreamingConfig struct {
 	Bitrate int    `yaml:"bitrate"`
 }
 
+type CacheConfig struct {
+	Enabled bool `yaml:"enable"`
+	N       int  `yaml:"n_items"`
+	TTL     int  `yaml:"ttl"`
+}
+
 type ServerCfg struct {
 	Host             string           `yaml:"host"`
 	Keys             string           `yaml:"keys"`
@@ -53,6 +59,7 @@ type ServerCfg struct {
 	Encrypt          bool             `yaml:"encrypt"`
 	Compress         bool             `yaml:"compress"`
 	CompressionLevel int              `yaml:"compression_lvl"`
+	Cache            CacheConfig      `yaml:"cache"`
 	Streaming        StreamingConfig  `yaml:"streaming"`
 	CORS             CORSConfig       `yaml:"cors"`
 	MWare            MiddlewareConfig `yaml:"middleware"`
@@ -172,6 +179,10 @@ func (cfg *ServerCfg) Print() {
 	fmt.Printf("Encrypt: %t\n", cfg.Encrypt)
 	fmt.Printf("Compress: %t\n", cfg.Compress)
 	fmt.Printf("CompressionLevel: %d\n", cfg.CompressionLevel)
+	fmt.Printf("Cache:\n")
+	fmt.Printf("  Enabled: %t\n", cfg.Cache.Enabled)
+	fmt.Printf("  N: %d\n", cfg.Cache.N)
+	fmt.Printf("  TTL: %d\n", cfg.Cache.TTL)
 	fmt.Printf("Streaming:\n")
 	fmt.Printf("  Enabled: %t\n", cfg.Streaming.Enabled)
 	fmt.Printf("  Codec: %s\n", cfg.Streaming.Codec)

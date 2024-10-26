@@ -38,6 +38,7 @@ func main() {
 
 	*conf_file = filepath.Join(config_dir, "conf.yml")
 
+	// TODO: Using install script for updates right now, might change this later
 	if *update {
 		Update()
 		return
